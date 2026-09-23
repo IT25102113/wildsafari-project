@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naturalist Guides Directory — WildSafari</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/custom-safari.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div th:replace="~{fragments/alerts :: alerts}"></div>
+
+<div class="container my-5">
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+        <div>
+            <span class="badge badge-safari-olive mb-1">Module 3 &bull; Kalhara N.O (IT25100156)</span>
+            <h2 class="fw-bold mb-0">Certified Naturalist Guides</h2>
+            <p class="text-muted small mb-0">Roster of DWC licensed trackers, birding specialists, and naturalists</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/allocation/dashboard}" class="btn btn-safari-outline btn-sm">&larr; Back to Dispatch Hub</a>
+            <button class="btn btn-safari-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addGuideModal">
+                + Add New Guide
+            </button>
+        </div>
+    </div>
+
+    <div class="safari-card p-4">
+        <div class="table-responsive">
+            <table class="safari-table">
+                <thead>
+                <tr>
+                    <th>Full Name</th>
+                    <th>License Number</th>
+                    <th>Contact Phone</th>
+                    <th>Email Address</th>
+                    <th>Languages Spoken</th>
+                    <th>Experience</th>
+                    <th>Daily Rate (LKR)</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="g : ${guides}">
+                    <td class="fw-bold" th:text="${g.fullName}">Sunil Bandara</td>
+                    <td>
+                        <span class="badge badge-safari-olive" th:text="${g.licenseNumber}">DWC-LK-4091</span>
+                    </td>
+                    <td th:text="${g.contactNumber}">0772345678</td>
+                    <td th:text="${g.email}">sunil.bandara@gmail.com</td>
+                    <td class="small" th:text="${g.languages}">English, Sinhala, German</td>
+                    <td><span th:text="${g.experienceYears}">14</span> Years</td>
+                    <td class="fw-semibold" th:text="${#numbers.formatDecimal(g.dailyRate, 0, 'COMMA', 2, 'POINT')}">5,500.00</td>
+                    <td>
+                        <span class="badge" th:classappend="${g.status == 'ACTIVE'} ? 'badge-safari-olive' : 'bg-secondary'" th:text="${g.status}">ACTIVE</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add New Guide -->
+<div class="modal fade" id="addGuideModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom px-4 py-3">
+                <h5 class="modal-title fw-bold">Register Certified Guide</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{/allocation/guides/save}" th:object="${newGuide}" method="post">
+                <div class="modal-body px-4 py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Full Name & Title <i class="bi bi-info-circle text-muted ms-1" title="e.g. Sunil Bandara (Senior Naturalist)"></i></label>
+                        <input type="text" th:field="*{fullName}" class="form-control safari-input"
+ required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">DWC License Number <i class="bi bi-info-circle text-muted ms-1" title="e.g. DWC-LK-4091"></i></label>
+                        <input type="text" th:field="*{licenseNumber}" class="form-control safari-input"
+ required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Contact Mobile (10 Digits) <i class="bi bi-info-circle text-muted ms-1" title="0772345678"></i></label>
+                            <input type="tel" th:field="*{contactNumber}" class="form-control safari-input" id="guidePhone"
+ maxlength="10" required>
+                            <div id="guidePhone-error" class="small text-danger validation-msg mt-1"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Email Address <i class="bi bi-info-circle text-muted ms-1" title="guide@gmail.com"></i></label>
+                            <input type="email" th:field="*{email}" class="form-control safari-input" id="guideEmail"
+ required>
+                            <div id="guideEmail-error" class="small text-danger validation-msg mt-1"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Languages Spoken <i class="bi bi-info-circle text-muted ms-1" title="e.g. English, Sinhala, German, French"></i></label>
+                        <input type="text" th:field="*{languages}" class="form-control safari-input"
+ required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Experience (Years)</label>
+                            <input type="number" th:field="*{experienceYears}" class="form-control safari-input" min="1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Daily Rate (LKR)</label>
+                            <input type="number" step="100" th:field="*{dailyRate}" class="form-control safari-input" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top px-4 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-safari-primary">Save Guide Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/validation.js}"></script>
+</body>
+</html>

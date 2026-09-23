@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmation Voucher — WildSafari</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/custom-safari.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div th:replace="~{fragments/alerts :: alerts}"></div>
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="safari-card p-4 p-md-5 shadow-sm">
+                <div class="text-center mb-4 pb-3 border-bottom">
+                    <span style="font-size: 2.5rem;">🎉</span>
+                    <h3 class="fw-bold mt-2 mb-1">Reservation Confirmed</h3>
+                    <p class="text-muted small">Your safari expedition has been registered in the Wildlife Safari system</p>
+                    <div class="d-inline-block px-3 py-1 rounded-pill" style="background-color: var(--safari-cream); border: 1px solid var(--safari-cream-dark);">
+                        <span class="small fw-bold">Booking Reference: </span>
+                        <strong class="text-dark" th:text="${booking.bookingReference}">WS-2026-10492</strong>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-muted small text-uppercase">Trip Details</h6>
+                        <div class="fw-bold fs-5" th:text="${booking.safariPackage.name}">Package Title</div>
+                        <div class="text-muted small">National Reserve: <strong th:text="${booking.safariPackage.nationalPark}">Yala</strong></div>
+                        <div class="text-muted small">Date: <strong th:text="${booking.tripDate}">2026-09-25</strong></div>
+                        <div class="text-muted small">Group Size: <strong th:text="${booking.participantCount}">2</strong> Passengers</div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-muted small text-uppercase">Lead Guest</h6>
+                        <div class="fw-bold fs-5" th:text="${booking.customerName}">Kavinda Perera</div>
+                        <div class="text-muted small">Email: <span th:text="${booking.customerEmail}">kavinda.perera@gmail.com</span></div>
+                        <div class="text-muted small">Phone: <span th:text="${booking.customerPhone}">0777654321</span></div>
+                    </div>
+                </div>
+
+                <!-- Status Cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6">
+                        <div class="p-3 rounded-3" style="background-color: var(--safari-bg); border: 1px solid var(--safari-border);">
+                            <div class="small text-muted">Reservation Status</div>
+                            <span class="badge badge-safari-olive fs-6 mt-1" th:text="${booking.bookingStatus}">CONFIRMED</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="p-3 rounded-3" style="background-color: var(--safari-bg); border: 1px solid var(--safari-border);">
+                            <div class="small text-muted">Payment Status</div>
+                            <span class="badge fs-6 mt-1"
+                                  th:classappend="${booking.paymentStatus == 'PAID'} ? 'badge-safari-olive' : 'badge-safari-rose'"
+                                  th:text="${booking.paymentStatus}">UNPAID</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assigned Crew Status (Module 3 Integration) -->
+                <div class="p-3 rounded-3 mb-4" style="background-color: white; border: 1.5px solid var(--safari-border);">
+                    <h6 class="fw-bold mb-2">🚙 Assigned Safari Crew & Vehicle</h6>
+                    <div th:if="${allocation != null}" class="small">
+                        <div><strong>Senior Naturalist:</strong> <span th:text="${allocation.guide.fullName}">Sunil Bandara</span> (<span th:text="${allocation.guide.languages}">Languages</span>)</div>
+                        <div><strong>Dispatched 4x4 Cruiser:</strong> <span th:text="${allocation.vehicle.vehicleModel}">Toyota Land Cruiser</span> [Registration: <span th:text="${allocation.vehicle.registrationNumber}">WP-CAB-4821</span>]</div>
+                    </div>
+                    <div th:if="${allocation == null}" class="small text-muted">
+                        Crew dispatch is in progress. The Operations Manager will allocate your certified naturalist and vehicle shortly.
+                    </div>
+                </div>
+
+                <!-- Equipment Rental (Module 4 Integration) -->
+                <div class="p-3 rounded-3 mb-4" style="background-color: white; border: 1.5px solid var(--safari-border);">
+                    <h6 class="fw-bold mb-2">🔭 Requested Equipment</h6>
+                    <div th:if="${rentedEquipment != null and !rentedEquipment.isEmpty()}">
+                        <ul class="list-unstyled mb-2 small">
+                            <li th:each="eq : ${rentedEquipment}" class="mb-1">
+                                <span class="fw-bold" th:text="${eq.allocatedQuantity}">1</span>x 
+                                <span th:text="${eq.equipment.itemName}">Binoculars</span> 
+                                <span class="badge bg-secondary" th:text="${eq.status}">ISSUED</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div th:if="${rentedEquipment == null or rentedEquipment.isEmpty()}" class="small text-muted mb-3">
+                        No additional equipment requested for this expedition.
+                    </div>
+                    
+                    <form th:if="${booking.bookingStatus != 'CANCELLED'}" th:action="@{/bookings/rent-equipment}" method="post" class="mt-2 p-2 rounded" style="background-color: var(--safari-bg);">
+                        <input type="hidden" name="bookingId" th:value="${booking.id}">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-6">
+                                <label class="small fw-bold mb-1">Add Equipment</label>
+                                <select name="equipmentId" class="form-select form-select-sm safari-input" required>
+                                    <option value="">Select Item...</option>
+                                    <option th:each="item : ${equipmentList}" th:value="${item.id}" 
+                                            th:text="${item.itemName} + ' (' + ${item.availableQuantity} + ' available)'"
+                                            th:disabled="${item.availableQuantity <= 0}"></option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="small fw-bold mb-1">Quantity</label>
+                                <input type="number" name="quantity" class="form-control form-control-sm safari-input" min="1" value="1" required>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-sm btn-safari-outline w-100">+ Request</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Total Amount & Payment Action -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between p-4 rounded-3 mb-4" style="background-color: var(--safari-cream);">
+                    <div>
+                        <div class="small text-muted">Total Expedition Amount:</div>
+                        <div class="h3 fw-bold mb-0" style="color: var(--safari-olive-dark);">
+                            LKR <span th:text="${#numbers.formatDecimal(booking.totalPrice, 0, 'COMMA', 2, 'POINT')}">57,000.00</span>
+                        </div>
+                    </div>
+
+                    <div th:if="${booking.paymentStatus != 'PAID'}" class="mt-3 mt-sm-0">
+                        <a th:if="${currentRole == 'CUSTOMER'}" th:href="@{'/finance/checkout/' + ${booking.id}}" class="btn btn-safari-primary btn-lg">
+                            Proceed to Payment &rarr;
+                        </a>
+                        <span th:if="${currentRole != 'CUSTOMER'}" class="badge badge-safari-rose p-2">Pending Customer Payment</span>
+                    </div>
+                    <div th:if="${booking.paymentStatus == 'PAID'}" class="mt-3 mt-sm-0">
+                        <span class="badge badge-safari-olive p-2">Payment Settled (Invoice Issued)</span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between gap-2 no-print">
+                    <a th:href="@{/bookings/my-bookings}" class="btn btn-outline-secondary btn-sm">My Bookings</a>
+                    <button onclick="window.print()" class="btn btn-safari-outline btn-sm">🖨️ Print Confirmation Voucher</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

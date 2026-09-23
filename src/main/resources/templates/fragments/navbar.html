@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+<div th:fragment="navbar">
+
+    <!-- Main Navigation Bar -->
+    <nav class="navbar navbar-expand-lg safari-navbar sticky-top shadow-sm">
+        <div class="container-fluid px-lg-4">
+            <a class="safari-brand" th:href="@{/}">
+                <span style="color: var(--safari-olive-dark); font-size: 1.5rem;">🌿</span>
+                <span>WildSafari<span style="color: var(--safari-rose-dark);">.lk</span></span>
+                <span class="safari-brand-badge d-none d-sm-inline">Sri Lanka</span>
+            </a>
+
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#safariNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="safariNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4 gap-lg-1 align-items-lg-center">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/}">
+                            <i class="bi bi-house-door"></i>
+                            <span>Home</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/packages}">
+                            <i class="bi bi-compass"></i>
+                            <span>Safari Packages</span>
+                        </a>
+                    </li>
+
+                    <!-- Customer Link -->
+                    <li class="nav-item" th:if="${currentRole == 'CUSTOMER'}">
+                        <a class="nav-link" th:href="@{/bookings/my-bookings}">
+                            <i class="bi bi-ticket-perforated"></i>
+                            <span>My Bookings</span>
+                        </a>
+                    </li>
+
+                    <!-- Single Role Specific Direct Links (For non-admin staff) -->
+                    <li class="nav-item" th:if="${currentRole == 'TOUR_OPERATOR'}">
+                        <a class="nav-link" th:href="@{/packages/manage}">
+                            <i class="bi bi-box-seam"></i>
+                            <span>Package Mgmt</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" th:if="${currentRole == 'OPERATIONS_MANAGER'}">
+                        <a class="nav-link" th:href="@{/allocation/dashboard}">
+                            <i class="bi bi-truck"></i>
+                            <span>Fleet &amp; Guides</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" th:if="${currentRole == 'CONSERVATION_OFFICER'}">
+                        <a class="nav-link" th:href="@{/conservation/dashboard}">
+                            <i class="bi bi-shield-check"></i>
+                            <span>Conservation</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" th:if="${currentRole == 'LOGISTICS_STAFF'}">
+                        <a class="nav-link" th:href="@{/inventory/dashboard}">
+                            <i class="bi bi-backpack"></i>
+                            <span>Depot Inventory</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" th:if="${currentRole == 'FINANCE_OFFICER'}">
+                        <a class="nav-link" th:href="@{/finance/dashboard}">
+                            <i class="bi bi-receipt"></i>
+                            <span>Finance &amp; Invoices</span>
+                        </a>
+                    </li>
+
+                    <!-- Admin Hub & Modules Dropdown (Keeps navbar clean without wrapping) -->
+                    <li class="nav-item" th:if="${currentRole == 'ADMIN'}">
+                        <a class="nav-link text-primary fw-bold" th:href="@{/admin/dashboard}">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>Admin Hub</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item dropdown" th:if="${currentRole == 'ADMIN'}">
+                        <a class="nav-link dropdown-toggle fw-semibold" href="#" id="navbarModulesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-grid-fill text-muted"></i>
+                            <span>System Modules</span>
+                        </a>
+                        <ul class="dropdown-menu shadow" aria-labelledby="navbarModulesDropdown">
+                            <li><h6 class="dropdown-header small text-uppercase fw-bold text-muted">University Student Modules</h6></li>
+                            <li><a class="dropdown-item" th:href="@{/packages/manage}"><i class="bi bi-box-seam text-success"></i> 1. Safari Packages (Gallage)</a></li>
+                            <li><a class="dropdown-item" th:href="@{/bookings/manage}"><i class="bi bi-ticket-perforated text-primary"></i> 2. Booking Reservations (Gamarachchi)</a></li>
+                            <li><a class="dropdown-item" th:href="@{/allocation/dashboard}"><i class="bi bi-truck text-warning"></i> 3. Fleet &amp; Guides Allocation (Kalhara)</a></li>
+                            <li><a class="dropdown-item" th:href="@{/conservation/dashboard}"><i class="bi bi-shield-check text-info"></i> 4. Conservation &amp; DWC Permits (Gunawardhana)</a></li>
+                            <li><a class="dropdown-item" th:href="@{/inventory/dashboard}"><i class="bi bi-backpack text-danger"></i> 5. Depot Gear &amp; Inventory (Dimalsha)</a></li>
+                            <li><a class="dropdown-item" th:href="@{/finance/dashboard}"><i class="bi bi-receipt text-success"></i> 6. Payment &amp; Invoice Billing (Patabendi)</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header small text-uppercase fw-bold text-muted">Core Admin Services</h6></li>
+                            <li><a class="dropdown-item" th:href="@{/admin/users}"><i class="bi bi-people"></i> Staff &amp; User Accounts</a></li>
+                            <li><a class="dropdown-item" th:href="@{/admin/activity-logs}"><i class="bi bi-journal-text"></i> Live System Audit Logs</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item" th:if="${currentRole == 'ADMIN'}">
+                        <a class="nav-link text-success fw-bold" th:href="@{/admin/database}">
+                            <i class="bi bi-database-fill"></i>
+                            <span>DB Tables</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- User Session & Auth Buttons -->
+                <div class="d-flex align-items-center gap-3">
+                    <div th:if="${currentUser != null}" class="dropdown">
+                        <button class="btn btn-sm btn-light border dropdown-toggle d-flex align-items-center gap-2 px-2 py-1 shadow-sm"
+                                type="button" id="userMenuDropdown" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false"
+                                style="border-radius: 30px;">
+                            <img th:if="${currentUser.profilePicture != null and !currentUser.profilePicture.isEmpty()}"
+                                 th:src="${currentUser.profilePicture}"
+                                 alt="Avatar"
+                                 class="rounded-circle"
+                                 style="width: 28px; height: 28px; object-fit: cover;">
+                            <div th:unless="${currentUser.profilePicture != null and !currentUser.profilePicture.isEmpty()}"
+                                 class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold"
+                                 style="width: 28px; height: 28px; font-size: 0.8rem; background: var(--safari-olive-dark) !important;">
+                                <span th:text="${#strings.substring(currentUser.fullName, 0, 1)}">U</span>
+                            </div>
+                            <div class="text-start d-none d-md-block" style="line-height: 1.1;">
+                                <div class="small fw-bold text-dark text-truncate" style="max-width: 140px;" th:text="${currentUser.fullName}">User Name</div>
+                                <span class="badge badge-safari-olive" style="font-size: 0.62rem;" th:text="${currentUser.role}">ROLE</span>
+                            </div>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2" aria-labelledby="userMenuDropdown" style="min-width: 210px;">
+                            <li class="px-3 py-2 border-bottom">
+                                <div class="fw-bold text-dark small" th:text="${currentUser.fullName}">Full Name</div>
+                                <div class="text-muted small" style="font-size: 0.75rem;" th:text="${currentUser.email}">email@safari.lk</div>
+                            </li>
+                            <li>
+                                <a class="dropdown-item py-2 d-flex align-items-center gap-2" th:href="@{/profile}">
+                                    <i class="bi bi-person-gear text-primary"></i>
+                                    <span>Edit Profile</span>
+                                </a>
+                            </li>
+                            <li th:if="${currentRole == 'CUSTOMER'}">
+                                <a class="dropdown-item py-2 d-flex align-items-center gap-2" th:href="@{/bookings/my-bookings}">
+                                    <i class="bi bi-ticket-perforated text-success"></i>
+                                    <span>My Safari Bookings</span>
+                                </a>
+                            </li>
+                            <li th:if="${currentRole == 'ADMIN'}">
+                                <a class="dropdown-item py-2 d-flex align-items-center gap-2" th:href="@{/admin/dashboard}">
+                                    <i class="bi bi-speedometer2 text-warning"></i>
+                                    <span>Admin Hub</span>
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <a class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger" th:href="@{/logout}">
+                                    <i class="bi bi-box-arrow-right"></i>
+                                    <span>Sign Out</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div th:if="${currentUser == null}" class="d-flex align-items-center gap-2">
+                        <a th:href="@{/login}" class="btn btn-safari-outline btn-sm d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-box-arrow-in-right"></i>
+                            <span>Sign In</span>
+                        </a>
+                        <a th:href="@{/register}" class="btn btn-safari-primary btn-sm d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-person-plus-fill"></i>
+                            <span>Register</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+</div>
+</body>
+</html>

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Depot Inventory & Gear Tracking — WildSafari</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/custom-safari.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div th:replace="~{fragments/alerts :: alerts}"></div>
+
+<div class="container my-5">
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+        <div>
+            <span class="badge badge-safari-olive mb-1">Module 5 &bull; Dimalsha K.G.T (IT25101218)</span>
+            <h2 class="fw-bold mb-0">Safari Gear & Equipment Inventory</h2>
+            <p class="text-muted small mb-0">Track optics, emergency trauma packs, VHF bush radios, and expedition stock levels</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-safari-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addEquipModal">+ Add Gear Item</button>
+            <button class="btn btn-safari-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#issueEquipModal">Check-out to Booking</button>
+        </div>
+    </div>
+
+    <!-- Low Stock Warning Banner -->
+    <div th:if="${not #lists.isEmpty(lowStockItems)}" class="alert alert-danger shadow-sm border-0 rounded-4 p-4 mb-4" style="background-color: #FEF2F2;">
+        <div class="d-flex align-items-center gap-3">
+            <div style="font-size: 2rem;">⚠️</div>
+            <div>
+                <h6 class="fw-bold text-danger mb-1">Critical Low Stock Warning Detected!</h6>
+                <div class="text-danger mb-0" style="font-size: 0.75rem;">
+                    The following field equipment items have fallen below their safety operational minimum threshold:
+                    <span th:each="ls, iterStat : ${lowStockItems}" class="fw-bold">
+                        <span th:text="${ls.itemName}">Item</span> (Available: <span th:text="${ls.availableQuantity}">1</span>, Min Threshold: <span th:text="${ls.minThreshold}">2</span>)<span th:if="${not iterStat.last}">, </span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Table -->
+    <div class="safari-card p-4 mb-5">
+        <h5 class="fw-bold mb-3">Expedition Gear Registry</h5>
+        <div class="table-responsive">
+            <table class="safari-table">
+                <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Equipment Name</th>
+                    <th>Category</th>
+                    <th>Total Stock</th>
+                    <th>Available</th>
+                    <th>Min Threshold</th>
+                    <th>Condition</th>
+                    <th>Depot Location</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${equipmentList}">
+                    <td class="fw-bold">
+                        <span class="badge badge-safari-cream" th:text="${item.itemCode}">EQ-OPT-01</span>
+                    </td>
+                    <td class="fw-semibold" th:text="${item.itemName}">Nikon Monarch 8x42 Binoculars</td>
+                    <td>
+                        <span class="badge badge-safari-olive" th:text="${item.category}">OPTICS</span>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-1">
+                            <form th:action="@{'/inventory/adjust-stock/' + ${item.id}}" method="post">
+                                <input type="hidden" name="change" value="-1">
+                                <button type="submit" class="btn btn-sm btn-light border py-0 px-2" th:disabled="${item.totalQuantity <= 0}" title="Decrease Stock">-</button>
+                            </form>
+                            <span th:text="${item.totalQuantity}">10</span>
+                            <form th:action="@{'/inventory/adjust-stock/' + ${item.id}}" method="post">
+                                <input type="hidden" name="change" value="1">
+                                <button type="submit" class="btn btn-sm btn-light border py-0 px-2" title="Increase Stock">+</button>
+                            </form>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="fw-bold"
+                              th:classappend="${item.availableQuantity <= item.minThreshold} ? 'text-danger' : 'text-success'"
+                              th:text="${item.availableQuantity} + ' Units'">8 Units</span>
+                        <span th:if="${item.availableQuantity <= item.minThreshold}" class="badge bg-danger ms-1">LOW</span>
+                    </td>
+                    <td class="text-muted"><span th:text="${item.minThreshold}">3</span> Units</td>
+                    <td>
+                        <form th:action="@{'/inventory/toggle-status/' + ${item.id}}" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm p-0 border-0 bg-transparent" title="Click to toggle status">
+                                <span class="badge badge-safari-olive" th:if="${item.conditionStatus == 'GOOD'}">AVAILABLE (GOOD)</span>
+                                <span class="badge badge-safari-rose" th:if="${item.conditionStatus != 'GOOD'}">UNAVAILABLE (<span th:text="${item.conditionStatus}">DAMAGED</span>)</span>
+                            </button>
+                        </form>
+                    </td>
+                    <td class="small text-muted" th:text="${item.location}">Yala Depot</td>
+                    <td>
+                        <form th:action="@{'/inventory/delete/' + ${item.id}}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Decommission" onclick="return confirm('Decommission equipment?')">Decommission</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pending Requests Table -->
+    <div th:if="${not #lists.isEmpty(pendingRequests)}" class="safari-card p-4 mb-5 border-warning border border-2">
+        <h5 class="fw-bold mb-3 text-warning">Pending Equipment Requests</h5>
+        <div class="table-responsive">
+            <table class="safari-table">
+                <thead>
+                <tr>
+                    <th>Requested Date</th>
+                    <th>Equipment Name</th>
+                    <th>Quantity</th>
+                    <th>Booking Reference</th>
+                    <th>Remarks</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="req : ${pendingRequests}">
+                    <td class="text-muted small" th:text="${req.issuedDate}">2026-09-23</td>
+                    <td class="fw-bold" th:text="${req.equipment.itemName}">Binoculars</td>
+                    <td><span class="badge bg-secondary" th:text="${req.allocatedQuantity}">1</span></td>
+                    <td class="text-primary" th:text="${req.booking.bookingReference}">WS-2026</td>
+                    <td class="small text-muted" th:text="${req.remarks}">Customer request</td>
+                    <td>
+                        <form th:action="@{'/inventory/approve/' + ${req.id}}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-success" title="Approve Request & Issue">Approve & Issue</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+
+    <!-- Active Check-outs Table -->
+    <div th:if="${not #lists.isEmpty(activeAllocations)}" class="safari-card p-4 mb-5 border-success border border-2">
+        <h5 class="fw-bold mb-3 text-success">Active Equipment Check-outs (Currently In Use)</h5>
+        <div class="table-responsive">
+            <table class="safari-table">
+                <thead>
+                <tr>
+                    <th>Issued Date</th>
+                    <th>Equipment Name</th>
+                    <th>Quantity</th>
+                    <th>Booking Reference</th>
+                    <th>Remarks</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="alloc : ${activeAllocations}">
+                    <td class="text-muted small" th:text="${alloc.issuedDate}">2026-09-23</td>
+                    <td class="fw-bold" th:text="${alloc.equipment.itemName}">Binoculars</td>
+                    <td><span class="badge bg-secondary" th:text="${alloc.allocatedQuantity}">1</span></td>
+                    <td class="text-primary" th:text="${alloc.booking.bookingReference}">WS-2026</td>
+                    <td class="small text-muted" th:text="${alloc.remarks}">Issued</td>
+                    <td>
+                        <form th:action="@{'/inventory/return/' + ${alloc.id}}" method="post" class="d-flex gap-2 align-items-center">
+                            <select name="conditionReport" class="form-select form-select-sm" style="width: 150px;">
+                                <option value="Good condition">Good Condition</option>
+                                <option value="Damaged">Damaged</option>
+                                <option value="Lost">Lost</option>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-success" title="Mark as Returned">Mark Returned</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add New Equipment -->
+<div class="modal fade" id="addEquipModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom px-4 py-3">
+                <h5 class="modal-title fw-bold">Register Equipment Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{/inventory/add}" th:object="${newEquipment}" method="post">
+                <div class="modal-body px-4 py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Item Inventory Code <i class="bi bi-info-circle text-muted ms-1" title="e.g. EQ-OPT-05"></i></label>
+                        <input type="text" th:field="*{itemCode}" class="form-control safari-input"
+ required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Equipment Name & Model <i class="bi bi-info-circle text-muted ms-1" title="e.g. Bushnell Night Vision Monocular"></i></label>
+                        <input type="text" th:field="*{itemName}" class="form-control safari-input"
+ required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Category</label>
+                            <select th:field="*{category}" class="form-select safari-input" required>
+                                <option value="OPTICS">OPTICS (Binoculars, Scopes)</option>
+                                <option value="NAVIGATION">NAVIGATION (GPS, Compass)</option>
+                                <option value="COMMUNICATION">COMMUNICATION (VHF Radios)</option>
+                                <option value="SAFETY">SAFETY (Trauma Kits, Extinguishers)</option>
+                                <option value="CAMPING">CAMPING (Tents, Spotlights)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Depot Location <i class="bi bi-info-circle text-muted ms-1" title="Yala Base Depot"></i></label>
+                            <input type="text" th:field="*{location}" class="form-control safari-input"
+ required>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Total Initial Units</label>
+                            <input type="number" th:field="*{totalQuantity}" class="form-control safari-input" min="1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Min Stock Warning Level</label>
+                            <input type="number" th:field="*{minThreshold}" class="form-control safari-input" min="1" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top px-4 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-safari-primary">Save Equipment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Check-out to Booking -->
+<div class="modal fade" id="issueEquipModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom px-4 py-3">
+                <h5 class="modal-title fw-bold">Issue Gear to Safari Booking</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{/inventory/issue}" method="post">
+                <div class="modal-body px-4 py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Select Equipment Item</label>
+                        <select name="equipmentId" class="form-select safari-input" required>
+                            <option th:each="item : ${equipmentList}" th:value="${item.id}"
+                                    th:text="${item.itemName} + ' (' + ${item.availableQuantity} + ' available)'"></option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Assign to Reservation</label>
+                        <select name="bookingId" class="form-select safari-input" required>
+                            <option th:each="b : ${bookings}" th:value="${b.id}"
+                                    th:text="${b.bookingReference} + ' - ' + ${b.customerName} + ' (' + ${b.tripDate} + ')'"></option>
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Quantity to Issue</label>
+                            <input type="number" name="quantity" class="form-control safari-input" value="1" min="1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Special Remarks <i class="bi bi-info-circle text-muted ms-1" title="e.g. Issued with neck strap"></i></label>
+                            <input type="text" name="remarks" class="form-control safari-input">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top px-4 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-safari-primary">Check-out Equipment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

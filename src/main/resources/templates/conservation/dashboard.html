@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conservation & Compliance Registry — WildSafari</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/custom-safari.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div th:replace="~{fragments/alerts :: alerts}"></div>
+
+<div class="container my-5">
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+        <div>
+            <span class="badge badge-safari-olive mb-1">Module 4 &bull; Gunawardhana M.S (IT25101131)</span>
+            <h2 class="fw-bold mb-0">Conservation & Compliance Oversight</h2>
+            <p class="text-muted small mb-0">DWC official entry permits, scientific wildlife observations, and safety incident logs</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-safari-outline btn-sm" data-bs-toggle="modal" data-bs-target="#issuePermitModal">+ Issue Park Permit</button>
+            <button class="btn btn-safari-primary btn-sm" data-bs-toggle="modal" data-bs-target="#recordSightingModal">+ Record Wildlife Sighting</button>
+            <button class="btn btn-safari-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#reportIncidentModal">+ File Incident</button>
+        </div>
+    </div>
+
+    <!-- Compliance Metric Highlights -->
+    <div class="row g-3 mb-5">
+        <div class="col-md-4">
+            <div class="kpi-card">
+                <div>
+                    <div class="text-muted small fw-semibold">DWC Park Permits Issued</div>
+                    <div class="h3 fw-bold my-1" th:text="${summary.totalPermits}">1</div>
+                    <div class="small" style="color: var(--safari-olive-dark);">Full entry compliance</div>
+                </div>
+                <div class="kpi-icon" style="background-color: var(--safari-olive-light); color: var(--safari-olive-dark);">📜</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-card">
+                <div>
+                    <div class="text-muted small fw-semibold">Wildlife Sightings Logged</div>
+                    <div class="h3 fw-bold my-1" th:text="${summary.totalSightings}">2</div>
+                    <div class="small" style="color: var(--safari-rose-dark);">Scientific lock active</div>
+                </div>
+                <div class="kpi-icon" style="background-color: var(--safari-blush); color: var(--safari-rose-dark);">🐆</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-card">
+                <div>
+                    <div class="text-muted small fw-semibold">Park Incident Reports</div>
+                    <div class="h3 fw-bold my-1" th:text="${summary.totalIncidents}">1</div>
+                    <div class="small text-muted">Audited & Investigated</div>
+                </div>
+                <div class="kpi-icon" style="background-color: var(--safari-cream); color: #6C5E1B;">🚨</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. Wildlife Sightings Table -->
+    <div class="safari-card p-4 mb-5">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+                <h5 class="fw-bold mb-0">Scientific Wildlife Observations Log</h5>
+                <p class="text-muted small mb-0">Locked scientific records to prevent tampering and uphold academic integrity</p>
+            </div>
+            <span class="badge badge-safari-olive">🔒 Submitted Records Locked</span>
+        </div>
+        <div class="table-responsive">
+            <table class="safari-table">
+                <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>National Park</th>
+                    <th>Species Observed</th>
+                    <th>Track / Sector</th>
+                    <th>Count</th>
+                    <th>Observed Behavior</th>
+                    <th>Integrity Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${sightings}">
+                    <td class="small text-muted" th:text="${#temporals.format(s.sightingTimestamp, 'yyyy-MM-dd HH:mm')}">2026-09-20 07:15</td>
+                    <td class="fw-semibold" th:text="${s.parkName}">Yala</td>
+                    <td class="fw-bold" style="color: var(--safari-olive-dark);" th:text="${s.speciesName}">Leopard</td>
+                    <td th:text="${s.areaSector}">Sector 3</td>
+                    <td><span class="badge badge-safari-cream" th:text="${s.animalCount}">1</span></td>
+                    <td class="small" th:text="${s.observedBehavior}">Resting on rock outcrop...</td>
+                    <td>
+                        <span class="badge badge-safari-olive">SUBMITTED (LOCKED)</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 2. DWC Park Entry Permits Table -->
+    <div class="safari-card p-4 mb-5">
+        <h5 class="fw-bold mb-3">DWC Official Park Entry Permits</h5>
+        <div class="table-responsive">
+            <table class="safari-table">
+                <thead>
+                <tr>
+                    <th>Permit Number</th>
+                    <th>National Reserve</th>
+                    <th>Issue Date</th>
+                    <th>Valid Through</th>
+                    <th>Visitors</th>
+                    <th>DWC Levies (LKR)</th>
+                    <th>Issuing Ranger</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="p : ${permits}">
+                    <td class="fw-bold">
+                        <span class="badge badge-safari-olive" th:text="${p.permitNumber}">DWC-YAL-2026-891</span>
+                    </td>
+                    <td th:text="${p.parkName}">Yala</td>
+                    <td class="small text-muted" th:text="${p.issueDate}">2026-09-21</td>
+                    <td class="small fw-semibold" th:text="${p.validDate}">2026-09-25</td>
+                    <td><span th:text="${p.visitorCount}">2</span> Visitors</td>
+                    <td class="fw-semibold" th:text="${#numbers.formatDecimal(p.totalFeeLkr, 0, 'COMMA', 2, 'POINT')}">11,500.00</td>
+                    <td th:text="${p.issuingOfficer}">Ranger Pradeep Bandara</td>
+                    <td><span class="badge badge-safari-olive" th:text="${p.status}">ISSUED</span></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 3. Incident Reports Table -->
+    <div class="safari-card p-4">
+        <h5 class="fw-bold mb-3">Safety & Park Incident Register</h5>
+        <div class="table-responsive">
+            <table class="safari-table">
+                <thead>
+                <tr>
+                    <th>Incident No.</th>
+                    <th>Park Location</th>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>Description</th>
+                    <th>Action Taken</th>
+                    <th>Date</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="inc : ${incidents}">
+                    <td class="fw-bold" th:text="${inc.incidentNumber}">INC-2026-104</td>
+                    <td th:text="${inc.parkName}">Yala</td>
+                    <td class="fw-semibold" th:text="${inc.incidentType}">OFF_TRACK_DRIVING</td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${inc.severity == 'CRITICAL'} ? 'bg-danger' : (${inc.severity == 'HIGH'} ? 'bg-warning text-dark' : 'badge-safari-cream')"
+                              th:text="${inc.severity}">LOW</span>
+                    </td>
+                    <td class="small" th:text="${inc.description}">External safari vehicle deviated...</td>
+                    <td class="small text-muted" th:text="${inc.actionTaken}">Verbal warning issued...</td>
+                    <td class="small text-muted" th:text="${inc.reportedDate}">2026-09-19</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Issue Park Permit -->
+<div class="modal fade" id="issuePermitModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom px-4 py-3">
+                <h5 class="modal-title fw-bold">Issue Official DWC Permit</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{/conservation/permits/issue}" th:object="${newPermit}" method="post">
+                <div class="modal-body px-4 py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Select National Reserve</label>
+                        <select th:field="*{parkName}" class="form-select safari-input" required>
+                            <option value="Yala National Park">Yala National Park</option>
+                            <option value="Wilpattu National Park">Wilpattu National Park</option>
+                            <option value="Udawalawe National Park">Udawalawe National Park</option>
+                            <option value="Minneriya National Park">Minneriya National Park</option>
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Visitor Count</label>
+                            <input type="number" th:field="*{visitorCount}" class="form-control safari-input" min="1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">DWC Fee (LKR)</label>
+                            <input type="number" step="100" th:field="*{totalFeeLkr}" class="form-control safari-input" required>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Valid Entry Date</label>
+                            <input type="date" th:field="*{validDate}" class="form-control safari-input" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Issuing Officer <i class="bi bi-info-circle text-muted ms-1" title="Ranger Pradeep Bandara"></i></label>
+                            <input type="text" th:field="*{issuingOfficer}" class="form-control safari-input"
+>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top px-4 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-safari-primary">Generate Permit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Record Wildlife Sighting -->
+<div class="modal fade" id="recordSightingModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom px-4 py-3">
+                <h5 class="modal-title fw-bold">Log Wildlife Observation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{/conservation/sightings/record}" th:object="${newSighting}" method="post">
+                <div class="modal-body px-4 py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">National Reserve</label>
+                        <select th:field="*{parkName}" class="form-select safari-input" required>
+                            <option value="Yala National Park">Yala National Park</option>
+                            <option value="Wilpattu National Park">Wilpattu National Park</option>
+                            <option value="Udawalawe National Park">Udawalawe National Park</option>
+                            <option value="Minneriya National Park">Minneriya National Park</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Species Observed</label>
+                        <select th:field="*{speciesName}" class="form-select safari-input" required>
+                            <option value="Sri Lankan Leopard (Panthera pardus kotiya)">Sri Lankan Leopard (Panthera pardus kotiya)</option>
+                            <option value="Asian Elephant (Elephas maximus maximus)">Asian Elephant (Elephas maximus maximus)</option>
+                            <option value="Sloth Bear (Melursus ursinus inornatus)">Sloth Bear (Melursus ursinus inornatus)</option>
+                            <option value="Mugger Crocodile (Crocodylus palustris)">Mugger Crocodile (Crocodylus palustris)</option>
+                            <option value="Crested Serpent Eagle (Spilornis cheela)">Crested Serpent Eagle (Spilornis cheela)</option>
+                            <option value="Spotted Deer (Axis axis ceylonensis)">Spotted Deer (Axis axis ceylonensis)</option>
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold">Track Sector / Area <i class="bi bi-info-circle text-muted ms-1" title="e.g. Buthawa Plains Sector 3 or Kumbuk Wila"></i></label>
+                            <input type="text" th:field="*{areaSector}" class="form-control safari-input"
+ required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Count</label>
+                            <input type="number" th:field="*{animalCount}" class="form-control safari-input" min="1" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Observed Behavior & Notes <i class="bi bi-info-circle text-muted ms-1" title="e.g. Male resting on granite rock, unperturbed by vehicles..."></i></label>
+                        <textarea th:field="*{observedBehavior}" class="form-control safari-input" rows="3"
+ required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top px-4 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-safari-primary">Log Sighting</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Report Incident -->
+<div class="modal fade" id="reportIncidentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom px-4 py-3">
+                <h5 class="modal-title fw-bold">File Park Safety Incident</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{/conservation/incidents/report}" th:object="${newIncident}" method="post">
+                <div class="modal-body px-4 py-3">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">National Park</label>
+                            <select th:field="*{parkName}" class="form-select safari-input" required>
+                                <option value="Yala National Park">Yala National Park</option>
+                                <option value="Wilpattu National Park">Wilpattu National Park</option>
+                                <option value="Udawalawe National Park">Udawalawe National Park</option>
+                                <option value="Minneriya National Park">Minneriya National Park</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Severity Level</label>
+                            <select th:field="*{severity}" class="form-select safari-input" required>
+                                <option value="LOW">LOW</option>
+                                <option value="MEDIUM">MEDIUM</option>
+                                <option value="HIGH">HIGH</option>
+                                <option value="CRITICAL">CRITICAL</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Incident Category</label>
+                        <select th:field="*{incidentType}" class="form-select safari-input" required>
+                            <option value="OFF_TRACK_DRIVING">Off-Track Driving Violation</option>
+                            <option value="ANIMAL_HARASSMENT">Animal Harassment / Crowding</option>
+                            <option value="VEHICLE_BREAKDOWN">Vehicle Breakdown in Reserve</option>
+                            <option value="MEDICAL_EMERGENCY">Medical / Heat Exhaustion Emergency</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Incident Description</label>
+                        <textarea th:field="*{description}" class="form-control safari-input" rows="2" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Action Taken / Resolution</label>
+                        <textarea th:field="*{actionTaken}" class="form-control safari-input" rows="2" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top px-4 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-safari-primary">File Incident</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

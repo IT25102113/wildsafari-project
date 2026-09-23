@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Tables & Data Explorer — WildSafari</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/custom-safari.css}">
+    <style>
+        .db-tab-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.65rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(0,0,0,0.06);
+            background: #FFFFFF;
+            color: var(--safari-dark);
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-bottom: 0.4rem;
+        }
+        .db-tab-btn:hover {
+            background: #F4F7F1;
+            border-color: var(--safari-olive);
+            transform: translateX(3px);
+        }
+        .db-tab-btn.active {
+            background: var(--safari-olive);
+            color: #FFFFFF !important;
+            border-color: var(--safari-olive-dark);
+            box-shadow: 0 4px 10px rgba(142, 166, 107, 0.35);
+        }
+        .db-tab-btn.active .badge {
+            background-color: #FFFFFF !important;
+            color: var(--safari-olive-dark) !important;
+        }
+        .db-cell {
+            max-width: 260px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 0.85rem;
+        }
+        .meta-pill {
+            background: #F7F9F6;
+            border: 1px solid #E5E9E1;
+            padding: 0.4rem 0.85rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div th:replace="~{fragments/alerts :: alerts}"></div>
+
+<div class="container-fluid px-lg-5 my-4">
+    <!-- Header Section -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge badge-safari-olive">System Administration &bull; Database Explorer</span>
+                <span class="badge badge-safari-cream">Direct Schema Inspector</span>
+            </div>
+            <h2 class="fw-bold mb-0">Live Database Tables &amp; Data Records</h2>
+            <p class="text-muted small mb-0">Inspect real-time table records, schema fields, and record counts across all 6 safari modules</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-safari-outline btn-sm" data-bs-toggle="modal" data-bs-target="#dbHelpModal">
+                📖 How to View in XAMPP / IntelliJ
+            </button>
+            <a th:href="@{/admin/dashboard}" class="btn btn-safari-secondary btn-sm">
+                &larr; Return to Admin Hub
+            </a>
+        </div>
+    </div>
+
+    <!-- DB Connection Metadata Bar -->
+    <div class="safari-card p-3 mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="fw-bold small text-muted">Active Data Source:</span>
+                <span class="meta-pill" th:each="entry : ${dbMetadata}">
+                    <strong th:text="${entry.key} + ':'">Key:</strong>
+                    <span th:text="${entry.value}" class="text-muted">Value</span>
+                </span>
+            </div>
+            <div>
+                <span class="badge bg-success px-3 py-2">● Online &amp; Synchronized</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column: Tables List -->
+        <div class="col-lg-3">
+            <div class="safari-card p-3 mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h6 class="fw-bold mb-0">Database Tables</h6>
+                    <span class="badge bg-secondary" th:text="${#lists.size(tables)} + ' Tables'">15 Tables</span>
+                </div>
+                <div class="db-tables-list" style="max-height: 650px; overflow-y: auto;">
+                    <a th:each="t : ${tables}"
+                       th:href="@{/admin/database(table=${t.tableName})}"
+                       th:classappend="${selectedTable == t.tableName} ? 'active' : ''"
+                       class="db-tab-btn">
+                        <div>
+                            <div th:text="${t.displayName}">Safari Packages</div>
+                            <div class="small opacity-75" style="font-size: 0.72rem;" th:text="${t.module}">Module 1</div>
+                        </div>
+                        <span class="badge bg-light text-dark rounded-pill" th:text="${t.rowCount}">0</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Active Table Data Grid -->
+        <div class="col-lg-9">
+            <div class="safari-card p-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between pb-3 mb-3 border-bottom gap-3">
+                    <div>
+                        <span class="badge badge-safari-olive mb-1" th:text="${activeTableData.module}">Module 1</span>
+                        <h4 class="fw-bold mb-0">
+                            <span class="font-monospace text-success">table:</span>
+                            <span th:text="${activeTableData.tableName}">safari_packages</span>
+                            <span class="text-muted fw-normal fs-6">(&bull; <span th:text="${activeTableData.displayName}">Safari Packages</span>)</span>
+                        </h4>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="input-group input-group-sm" style="width: 250px;">
+                            <span class="input-group-text bg-white border-end-0">🔍</span>
+                            <input type="text" id="dbSearchInput" class="form-control border-start-0" placeholder="Filter rows in this table...">
+                        </div>
+                        <span class="badge badge-safari-cream px-3 py-2 fw-semibold" id="tableCountBadge"
+                              th:text="${#lists.size(activeTableData.rows)} + ' Rows displayed'">0 Rows</span>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div th:if="${#lists.isEmpty(activeTableData.rows)}" class="text-center py-5">
+                    <div class="display-6 mb-3">📭</div>
+                    <h5 class="fw-bold text-muted">No records found in this table</h5>
+                    <p class="small text-muted mb-0">This table is currently empty or initialized with 0 rows. Use the application modules to insert test data!</p>
+                </div>
+
+                <!-- Data Table -->
+                <div th:if="${not #lists.isEmpty(activeTableData.rows)}" class="table-responsive" style="max-height: 580px; overflow-y: auto;">
+                    <table class="safari-table table-hover table-striped align-middle" id="liveDataTable">
+                        <thead>
+                        <tr>
+                            <th th:each="col : ${activeTableData.columns}" th:text="${col}" class="text-uppercase small fw-bold">COLUMN</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="row : ${activeTableData.rows}">
+                            <td th:each="col : ${activeTableData.columns}" class="db-cell" th:title="${row.get(col)}">
+                                <span th:if="${row.get(col) != null}" th:text="${row.get(col)}">Value</span>
+                                <span th:if="${row.get(col) == null}" class="badge bg-light text-muted font-monospace">NULL</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: How to View via XAMPP & IntelliJ -->
+<div class="modal fade" id="dbHelpModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-lg modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom px-4 py-3">
+                <h5 class="modal-title fw-bold">Guide: How to Inspect &amp; Manage Database Tables</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success mb-2">Method 1: Built-in Live Web Explorer (Easiest &bull; No extra software)</h6>
+                    <p class="small text-muted mb-0">
+                        You are already on this screen! Simply click any table on the left sidebar to inspect live data, filter columns, and check row counts.
+                    </p>
+                </div>
+
+                <hr>
+
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary mb-2">Method 2: Directly inside IntelliJ IDEA (Ultimate or Community)</h6>
+                    <ol class="small text-muted mb-0 ps-3">
+                        <li class="mb-1">In IntelliJ IDEA, look at the <strong>far right sidebar</strong> and click the <strong>"Database"</strong> tool icon.</li>
+                        <li class="mb-1">Click the <strong><code>+</code></strong> button &rarr; <strong>Data Source</strong> &rarr; <strong>MySQL</strong>.</li>
+                        <li class="mb-1">Enter your credentials:
+                            <ul class="mt-1">
+                                <li><strong>Host:</strong> <code>localhost</code> (Port: <code>3306</code>)</li>
+                                <li><strong>User:</strong> <code>root</code></li>
+                                <li><strong>Password:</strong> <code>root123</code></li>
+                                <li><strong>Database:</strong> <code>safari_db</code></li>
+                            </ul>
+                        </li>
+                        <li class="mb-1">Click <strong>"Test Connection"</strong> (if prompted to download driver, click <em>Download Driver</em>).</li>
+                        <li>Click <strong>OK</strong>. You can now double-click any table to edit, insert, or view records like an Excel sheet!</li>
+                    </ol>
+                </div>
+
+                <hr>
+
+                <div>
+                    <h6 class="fw-bold text-warning mb-2" style="color: #B45309 !important;">Method 3: Using XAMPP phpMyAdmin (Web Browser)</h6>
+                    <ol class="small text-muted mb-0 ps-3">
+                        <li class="mb-1">Open <strong>XAMPP Control Panel</strong> and click <strong>Start</strong> next to <strong>MySQL</strong>.</li>
+                        <li class="mb-1">Open your web browser and go to: <a href="http://localhost/phpmyadmin" target="_blank" class="fw-bold">http://localhost/phpmyadmin</a></li>
+                        <li class="mb-1">In the left sidebar, click on <strong><code>safari_db</code></strong>.</li>
+                        <li>Click on any table (e.g. <code>bookings</code>, <code>safari_packages</code>) to browse, export to CSV/PDF, or run custom SQL queries.</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="modal-footer border-top px-4 py-3">
+                <button type="button" class="btn btn-safari-primary btn-sm" data-bs-dismiss="modal">Got it, thanks!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Live client-side row filtering
+    document.getElementById('dbSearchInput')?.addEventListener('input', function(e) {
+        const query = e.target.value.toLowerCase().trim();
+        const rows = document.querySelectorAll('#liveDataTable tbody tr');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(query)) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        const badge = document.getElementById('tableCountBadge');
+        if (badge) {
+            badge.textContent = visibleCount + ' Rows matching';
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Safari Expedition — WildSafari Sri Lanka</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/custom-safari.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div th:replace="~{fragments/alerts :: alerts}"></div>
+
+<div class="container my-5">
+    <div class="row g-5 justify-content-center">
+        <!-- Booking Form Column -->
+        <div class="col-lg-8">
+            <div class="safari-card p-4 p-md-5 shadow-sm">
+                <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom">
+                    <div>
+                        <span class="badge badge-safari-rose mb-1">Module 2 &bull; Gamarachchi D.A (IT25102113)</span>
+                        <h3 class="fw-bold mb-0">Reserve Your Safari</h3>
+                    </div>
+                    <a th:href="@{'/packages/' + ${pkg.id}}" class="btn btn-outline-secondary btn-sm">&larr; Back to Package</a>
+                </div>
+
+                <form th:action="@{/bookings/create}" th:object="${booking}" method="post" id="safariBookingForm">
+                    <input type="hidden" name="packageId" th:value="${pkg.id}">
+                    <input type="hidden" id="pkgBasePrice" th:value="${pkg.basePrice}">
+                    <input type="hidden" id="pkgMultiplier" th:value="${pkg.peakSeasonMultiplier}">
+
+                    <h5 class="fw-bold mb-3" style="color: var(--safari-dark);">1. Lead Passenger Details</h5>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Full Name (Lead Passenger) <i class="bi bi-info-circle text-muted ms-1" title="e.g. Kavinda Perera"></i></label>
+                        <input type="text" th:field="*{customerName}" class="form-control safari-input"
+ required>
+                        <div th:if="${#fields.hasErrors('customerName')}" th:errors="*{customerName}" class="small text-danger mt-1"></div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Email Address (Confirmation & Receipt) <i class="bi bi-info-circle text-muted ms-1" title="e.g. name@gmail.com"></i></label>
+                            <input type="email" th:field="*{customerEmail}" class="form-control safari-input" id="bookingEmail"
+ required>
+                            <div id="bookingEmail-error" class="small text-danger validation-msg mt-1"></div>
+                            <div th:if="${#fields.hasErrors('customerEmail')}" th:errors="*{customerEmail}" class="small text-danger mt-1"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Contact Mobile (10 Digits) <i class="bi bi-info-circle text-muted ms-1" title="e.g. 0771234567"></i></label>
+                            <input type="tel" th:field="*{customerPhone}" class="form-control safari-input" id="bookingPhone"
+ maxlength="10" required>
+                            <div id="bookingPhone-error" class="small text-danger validation-msg mt-1"></div>
+                            <div th:if="${#fields.hasErrors('customerPhone')}" th:errors="*{customerPhone}" class="small text-danger mt-1"></div>
+                        </div>
+                    </div>
+
+                    <h5 class="fw-bold mt-4 mb-3" style="color: var(--safari-dark);">2. Expedition Schedule & Group</h5>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Trip Date</label>
+                            <input type="date" th:field="*{tripDate}" class="form-control safari-input" id="bookingTripDate" required>
+                            <div th:if="${#fields.hasErrors('tripDate')}" th:errors="*{tripDate}" class="small text-danger mt-1"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Number of Participants (Max <span th:text="${pkg.maxGroupSize}">6</span>)</label>
+                            <input type="number" th:field="*{participantCount}" class="form-control safari-input" id="bookingParticipants"
+                                   min="1" th:max="${pkg.maxGroupSize}" required>
+                            <div th:if="${#fields.hasErrors('participantCount')}" th:errors="*{participantCount}" class="small text-danger mt-1"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Special Requests / Equipment Preferences <i class="bi bi-info-circle text-muted ms-1" title="e.g. High-optical zoom binoculars rental, elderly passenger assistance, dietary needs..."></i></label>
+                        <textarea th:field="*{specialRequests}" class="form-control safari-input" rows="3"
+></textarea>
+                    </div>
+
+                    <!-- Live Strategy Pricing Calculation Display -->
+                    <div class="p-4 rounded-3 mb-4" style="background-color: var(--safari-bg); border: 1.5px solid var(--safari-border);">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-muted small">Package Base Rate:</span>
+                            <span class="fw-semibold">LKR <span th:text="${#numbers.formatDecimal(pkg.basePrice, 0, 'COMMA', 2, 'POINT')}">28,500.00</span> per pax</span>
+                        </div>
+                        <div id="peakSeasonNotice" class="d-none alert alert-warning py-1 px-2 small mb-2">
+                            ⚡ Peak Season Rate Applied (+<span th:text="${(pkg.peakSeasonMultiplier - 1.0) * 100}">25</span>%) via Strategy Pattern
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between pt-2 border-top">
+                            <span class="fw-bold">Estimated Total Price:</span>
+                            <span class="h4 fw-bold mb-0" id="calculatedTotalPrice" style="color: var(--safari-olive-dark);">
+                                LKR <span th:text="${#numbers.formatDecimal(pkg.basePrice, 0, 'COMMA', 2, 'POINT')}">28,500.00</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-safari-primary w-100 py-3 fw-bold">Confirm Reservation & Proceed &rarr;</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sidebar Summary -->
+        <div class="col-lg-4">
+            <div class="safari-card p-4">
+                <img th:src="${pkg.coverImage}" class="img-fluid rounded-3 mb-3" style="max-height: 180px; width: 100%; object-fit: cover;" alt="Cover">
+                <h5 class="fw-bold mb-1" th:text="${pkg.name}">Package Name</h5>
+                <span class="badge badge-safari-olive mb-3" th:text="${pkg.nationalPark}">Park</span>
+
+                <ul class="list-unstyled small text-muted border-top pt-3">
+                    <li class="mb-2"><strong>Duration:</strong> <span th:text="${pkg.durationDays}">1</span> Day(s)</li>
+                    <li class="mb-2"><strong>Max Capacity:</strong> <span th:text="${pkg.maxGroupSize}">6</span> Passengers</li>
+                    <li class="mb-2"><strong>Cancellation Policy:</strong> Free rescheduling/cancellation up to 48 hours before departure.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/validation.js}"></script>
+</body>
+</html>

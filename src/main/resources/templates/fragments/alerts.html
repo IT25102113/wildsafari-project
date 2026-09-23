@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="alerts" class="container mt-3">
+    <!-- Success Alert -->
+    <div th:if="${successMessage != null}" class="alert alert-success alert-dismissible fade show shadow-sm border-0 d-flex align-items-center" role="alert" style="background-color: var(--safari-olive-light); color: var(--safari-olive-dark);">
+        <span class="me-2" style="font-size: 1.2rem;">✅</span>
+        <div class="fw-semibold" th:text="${successMessage}">Operation successful!</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <!-- Error Alert -->
+    <div th:if="${errorMessage != null}" class="alert alert-danger alert-dismissible fade show shadow-sm border-0 d-flex align-items-center" role="alert" style="background-color: #FDF2F2; color: #9B1C1C;">
+        <span class="me-2" style="font-size: 1.2rem;">⚠️</span>
+        <div class="fw-semibold" th:text="${errorMessage}">An error occurred.</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+</body>
+</html>
