@@ -43,7 +43,6 @@ public class Booking {
     private String customerPhone;
 
     @NotNull(message = "Trip date is required")
-    @FutureOrPresent(message = "Trip date cannot be in the past")
     @Column(name = "trip_date", nullable = false)
     private LocalDate tripDate;
 

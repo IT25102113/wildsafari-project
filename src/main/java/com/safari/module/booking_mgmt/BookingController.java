@@ -96,6 +96,10 @@ public class BookingController {
                     "Participant count exceeds maximum capacity (" + pkg.getMaxGroupSize() + ")");
         }
 
+        if (booking.getTripDate() != null && booking.getTripDate().isBefore(LocalDate.now())) {
+            bindingResult.rejectValue("tripDate", "error.booking", "Trip date cannot be in the past");
+        }
+
         if (bindingResult.hasErrors()) {
             model.addAttribute("pkg", pkg);
             model.addAttribute("currentUser", user);

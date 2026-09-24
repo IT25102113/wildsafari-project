@@ -84,7 +84,15 @@ public class AllocationController {
             allocationService.assignCrew(bookingId, guideId, vehicleId, dispatchNotes, actorEmail);
             redirectAttributes.addFlashAttribute("successMessage", "Crew successfully assigned to booking without any scheduling conflicts!");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            String msg = e.getMessage();
+            Throwable t = e;
+            while (t.getCause() != null) {
+                t = t.getCause();
+                if (t.getMessage() != null && !t.getMessage().isBlank()) {
+                    msg = t.getMessage();
+                }
+            }
+            redirectAttributes.addFlashAttribute("errorMessage", msg);
         }
 
         return "redirect:/allocation/dashboard";
@@ -104,7 +112,15 @@ public class AllocationController {
             allocationService.reassignCrew(allocationId, guideId, vehicleId, notes, actorEmail);
             redirectAttributes.addFlashAttribute("successMessage", "Crew emergency reassignment saved successfully.");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            String msg = e.getMessage();
+            Throwable t = e;
+            while (t.getCause() != null) {
+                t = t.getCause();
+                if (t.getMessage() != null && !t.getMessage().isBlank()) {
+                    msg = t.getMessage();
+                }
+            }
+            redirectAttributes.addFlashAttribute("errorMessage", msg);
         }
 
         return "redirect:/allocation/dashboard";

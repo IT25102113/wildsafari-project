@@ -111,14 +111,17 @@ public class AllocationService {
 
         LocalDate tripDate = booking.getTripDate();
 
+        Optional<TripAllocation> existingOpt = allocationRepository.findByBookingId(bookingId);
+        Long excludeAllocationId = existingOpt.map(TripAllocation::getId).orElse(null);
+
         // 1. Conflict Detection: Is guide already busy on this date?
-        if (allocationRepository.isGuideBusyOnDate(guideId, tripDate, null)) {
+        if (allocationRepository.isGuideBusyOnDate(guideId, tripDate, excludeAllocationId)) {
             throw new IllegalStateException("Allocation Conflict: Guide " + guide.getFullName() +
                     " is already assigned to another safari trip on " + tripDate + "!");
         }
 
         // 2. Conflict Detection: Is vehicle already assigned on this date?
-        if (allocationRepository.isVehicleBusyOnDate(vehicleId, tripDate, null)) {
+        if (allocationRepository.isVehicleBusyOnDate(vehicleId, tripDate, excludeAllocationId)) {
             throw new IllegalStateException("Allocation Conflict: Vehicle " + vehicle.getRegistrationNumber() +
                     " is already allocated to another safari trip on " + tripDate + "!");
         }
@@ -134,7 +137,13 @@ public class AllocationService {
             throw new IllegalStateException("Vehicle " + vehicle.getRegistrationNumber() + " is currently under maintenance and cannot be dispatched.");
         }
 
-        TripAllocation allocation = new TripAllocation(booking, guide, vehicle, tripDate, dispatchNotes);
+        TripAllocation allocation = existingOpt.orElseGet(() -> new TripAllocation(booking, guide, vehicle, tripDate, dispatchNotes));
+        allocation.setGuide(guide);
+        allocation.setVehicle(vehicle);
+        allocation.setAllocationDate(tripDate);
+        allocation.setDispatchNotes(dispatchNotes);
+        allocation.setStatus("ASSIGNED");
+
         TripAllocation saved = allocationRepository.save(allocation);
 
         // Update booking status to confirmed if pending
