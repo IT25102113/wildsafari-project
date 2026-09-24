@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/allocation")
@@ -41,9 +43,26 @@ public class AllocationController {
         List<Guide> guides = allocationService.getActiveGuides();
         List<Vehicle> vehicles = allocationService.getAvailableVehicles();
 
+        Set<Long> allocatedBookingIds = allocations.stream()
+                .filter(a -> a.getBooking() != null)
+                .map(a -> a.getBooking().getId())
+                .collect(Collectors.toSet());
+
+        List<Booking> unassignedBookings = allBookings.stream()
+                .filter(b -> !"CANCELLED".equalsIgnoreCase(b.getBookingStatus()))
+                .filter(b -> !allocatedBookingIds.contains(b.getId()))
+                .toList();
+
+        List<Booking> assignedBookings = allBookings.stream()
+                .filter(b -> allocatedBookingIds.contains(b.getId()))
+                .toList();
+
         model.addAttribute("currentUser", user);
         model.addAttribute("currentRole", user.getRole());
         model.addAttribute("bookings", allBookings);
+        model.addAttribute("unassignedBookings", unassignedBookings);
+        model.addAttribute("assignedBookings", assignedBookings);
+        model.addAttribute("allocatedBookingIds", allocatedBookingIds);
         model.addAttribute("allocations", allocations);
         model.addAttribute("guides", guides);
         model.addAttribute("vehicles", vehicles);

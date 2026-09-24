@@ -119,4 +119,87 @@ public class ConservationController {
 
         return "redirect:/conservation/dashboard";
     }
+
+    @PostMapping("/permits/update-status/{id}")
+    public String updatePermitStatus(@PathVariable("id") Long id,
+                                     @RequestParam("status") String status,
+                                     HttpSession session,
+                                     RedirectAttributes redirectAttributes) {
+        User user = UserSession.getLoggedInUser(session);
+        String actorEmail = (user != null) ? user.getEmail() : "ranger@safari.lk";
+
+        try {
+            conservationService.updatePermitStatus(id, status, actorEmail);
+            redirectAttributes.addFlashAttribute("successMessage", "Permit status updated to " + status);
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/conservation/dashboard";
+    }
+
+    @PostMapping("/permits/delete/{id}")
+    public String deletePermit(@PathVariable("id") Long id,
+                               HttpSession session,
+                               RedirectAttributes redirectAttributes) {
+        User user = UserSession.getLoggedInUser(session);
+        String actorEmail = (user != null) ? user.getEmail() : "ranger@safari.lk";
+
+        try {
+            conservationService.deletePermit(id, actorEmail);
+            redirectAttributes.addFlashAttribute("successMessage", "Park permit record successfully deleted.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/conservation/dashboard";
+    }
+
+    @PostMapping("/sightings/delete/{id}")
+    public String deleteSighting(@PathVariable("id") Long id,
+                                 HttpSession session,
+                                 RedirectAttributes redirectAttributes) {
+        User user = UserSession.getLoggedInUser(session);
+        String actorEmail = (user != null) ? user.getEmail() : "ranger@safari.lk";
+
+        try {
+            conservationService.deleteSighting(id, actorEmail);
+            redirectAttributes.addFlashAttribute("successMessage", "Sighting record removed.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/conservation/dashboard";
+    }
+
+    @PostMapping("/incidents/update-status/{id}")
+    public String updateIncidentStatus(@PathVariable("id") Long id,
+                                       @RequestParam("status") String status,
+                                       @RequestParam(value = "actionTaken", required = false) String actionTaken,
+                                       HttpSession session,
+                                       RedirectAttributes redirectAttributes) {
+        User user = UserSession.getLoggedInUser(session);
+        String actorEmail = (user != null) ? user.getEmail() : "ranger@safari.lk";
+
+        try {
+            conservationService.updateIncidentStatus(id, status, actionTaken, actorEmail);
+            redirectAttributes.addFlashAttribute("successMessage", "Incident investigation status updated.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/conservation/dashboard";
+    }
+
+    @PostMapping("/incidents/delete/{id}")
+    public String deleteIncident(@PathVariable("id") Long id,
+                                 HttpSession session,
+                                 RedirectAttributes redirectAttributes) {
+        User user = UserSession.getLoggedInUser(session);
+        String actorEmail = (user != null) ? user.getEmail() : "ranger@safari.lk";
+
+        try {
+            conservationService.deleteIncident(id, actorEmail);
+            redirectAttributes.addFlashAttribute("successMessage", "Incident report record deleted.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/conservation/dashboard";
+    }
 }

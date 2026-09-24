@@ -108,6 +108,84 @@ public class ConservationService {
         return saved;
     }
 
+    @Transactional
+    public void updatePermitStatus(Long permitId, String newStatus, String actorEmail) {
+        permitRepository.findById(permitId).ifPresent(p -> {
+            p.setStatus(newStatus);
+            permitRepository.save(p);
+            activityLogService.publishActivity(
+                    actorEmail,
+                    "CONSERVATION_OFFICER",
+                    "Conservation & Compliance",
+                    "UPDATE_PERMIT_STATUS",
+                    "Permit " + p.getPermitNumber() + " status updated to " + newStatus
+            );
+        });
+    }
+
+    @Transactional
+    public void deletePermit(Long permitId, String actorEmail) {
+        permitRepository.findById(permitId).ifPresent(p -> {
+            String pNum = p.getPermitNumber();
+            permitRepository.delete(p);
+            activityLogService.publishActivity(
+                    actorEmail,
+                    "CONSERVATION_OFFICER",
+                    "Conservation & Compliance",
+                    "DELETE_PERMIT",
+                    "Park permit " + pNum + " permanently removed."
+            );
+        });
+    }
+
+    @Transactional
+    public void deleteSighting(Long sightingId, String actorEmail) {
+        sightingRepository.findById(sightingId).ifPresent(s -> {
+            String species = s.getSpeciesName();
+            sightingRepository.delete(s);
+            activityLogService.publishActivity(
+                    actorEmail,
+                    "CONSERVATION_OFFICER",
+                    "Conservation & Compliance",
+                    "DELETE_SIGHTING",
+                    "Wildlife observation of " + species + " deleted from records."
+            );
+        });
+    }
+
+    @Transactional
+    public void updateIncidentStatus(Long incidentId, String status, String actionTaken, String actorEmail) {
+        incidentRepository.findById(incidentId).ifPresent(inc -> {
+            inc.setStatus(status);
+            if (actionTaken != null && !actionTaken.isBlank()) {
+                inc.setActionTaken(actionTaken);
+            }
+            incidentRepository.save(inc);
+            activityLogService.publishActivity(
+                    actorEmail,
+                    "CONSERVATION_OFFICER",
+                    "Conservation & Compliance",
+                    "UPDATE_INCIDENT_STATUS",
+                    "Incident " + inc.getIncidentNumber() + " status changed to " + status
+            );
+        });
+    }
+
+    @Transactional
+    public void deleteIncident(Long incidentId, String actorEmail) {
+        incidentRepository.findById(incidentId).ifPresent(inc -> {
+            String num = inc.getIncidentNumber();
+            incidentRepository.delete(inc);
+            activityLogService.publishActivity(
+                    actorEmail,
+                    "CONSERVATION_OFFICER",
+                    "Conservation & Compliance",
+                    "DELETE_INCIDENT",
+                    "Incident report " + num + " was removed."
+            );
+        });
+    }
+
     // Compliance Summary Metrics
     public Map<String, Object> getComplianceSummary() {
         Map<String, Object> summary = new HashMap<>();

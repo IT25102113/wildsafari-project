@@ -232,6 +232,51 @@ public class FinanceService {
         });
     }
 
+    @Transactional
+    public void deleteInvoice(Long invoiceId, String actorEmail) {
+        invoiceRepository.findById(invoiceId).ifPresent(inv -> {
+            String invNum = inv.getInvoiceNumber();
+            invoiceRepository.delete(inv);
+            activityLogService.publishActivity(
+                    actorEmail,
+                    "FINANCE_OFFICER",
+                    "Payment & Invoice",
+                    "DELETE_INVOICE",
+                    "Tax Invoice " + invNum + " permanently deleted."
+            );
+        });
+    }
+
+    @Transactional
+    public void deletePayment(Long paymentId, String actorEmail) {
+        paymentRepository.findById(paymentId).ifPresent(pay -> {
+            String payRef = pay.getPaymentReference();
+            Booking booking = pay.getBooking();
+
+            // First delete any invoices attached to this payment
+            List<Invoice> relatedInvoices = invoiceRepository.findAll().stream()
+                    .filter(i -> i.getPayment() != null && i.getPayment().getId().equals(paymentId))
+                    .toList();
+            invoiceRepository.deleteAll(relatedInvoices);
+
+            // Revert booking payment status if it was paid
+            if (booking != null && "PAID".equalsIgnoreCase(booking.getPaymentStatus())) {
+                booking.setPaymentStatus("UNPAID");
+                bookingRepository.save(booking);
+            }
+
+            paymentRepository.delete(pay);
+
+            activityLogService.publishActivity(
+                    actorEmail,
+                    "FINANCE_OFFICER",
+                    "Payment & Invoice",
+                    "DELETE_PAYMENT",
+                    "Payment transaction " + payRef + " permanently deleted."
+            );
+        });
+    }
+
     public Map<String, Object> getRevenueReport() {
         List<Payment> paidPayments = paymentRepository.findAll().stream()
                 .filter(p -> "PAID".equalsIgnoreCase(p.getPaymentStatus()))

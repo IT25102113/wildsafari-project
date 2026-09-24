@@ -160,4 +160,38 @@ public class FinanceController {
 
         return "redirect:/finance/dashboard";
     }
+
+    @PostMapping("/invoice/delete/{id}")
+    public String deleteInvoice(@PathVariable("id") Long id,
+                                HttpSession session,
+                                RedirectAttributes redirectAttributes) {
+        User user = UserSession.getLoggedInUser(session);
+        String actorEmail = (user != null) ? user.getEmail() : "finance@safari.lk";
+
+        try {
+            financeService.deleteInvoice(id, actorEmail);
+            redirectAttributes.addFlashAttribute("successMessage", "Tax Invoice permanently deleted.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+
+        return "redirect:/finance/dashboard";
+    }
+
+    @PostMapping("/payment/delete/{id}")
+    public String deletePayment(@PathVariable("id") Long id,
+                                HttpSession session,
+                                RedirectAttributes redirectAttributes) {
+        User user = UserSession.getLoggedInUser(session);
+        String actorEmail = (user != null) ? user.getEmail() : "finance@safari.lk";
+
+        try {
+            financeService.deletePayment(id, actorEmail);
+            redirectAttributes.addFlashAttribute("successMessage", "Payment transaction permanently deleted.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+
+        return "redirect:/finance/dashboard";
+    }
 }

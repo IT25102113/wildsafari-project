@@ -30,9 +30,109 @@
         </div>
     </div>
 
+    <!-- Quick Status KPI Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="safari-card p-3 border-start border-4 border-warning shadow-sm">
+                <div class="text-muted small fw-semibold">Awaiting Crew Allocation</div>
+                <div class="h3 fw-bold mb-0 text-warning" th:text="${#lists.size(unassignedBookings)}">0</div>
+                <div class="small text-muted mt-1">Bookings needing Naturalist & 4x4</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="safari-card p-3 border-start border-4 border-success shadow-sm">
+                <div class="text-muted small fw-semibold">Active Dispatched Trips</div>
+                <div class="h3 fw-bold mb-0 text-success" th:text="${#lists.size(allocations)}">0</div>
+                <div class="small text-muted mt-1">Ready for safari expedition</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="safari-card p-3 border-start border-4 border-info shadow-sm">
+                <div class="text-muted small fw-semibold">Naturalist Guides</div>
+                <div class="h3 fw-bold mb-0 text-info" th:text="${#lists.size(guides)}">0</div>
+                <div class="small text-muted mt-1">Active certified naturalists</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="safari-card p-3 border-start border-4 border-primary shadow-sm">
+                <div class="text-muted small fw-semibold">Safari Cruisers (4x4)</div>
+                <div class="h3 fw-bold mb-0 text-primary" th:text="${#lists.size(vehicles)}">0</div>
+                <div class="small text-muted mt-1">Operational fleet vehicles</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. PENDING QUEUE: Bookings needing Guide & Cruiser -->
+    <div class="safari-card p-4 mb-5 border-2 border-warning shadow-sm">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-clock-history text-warning me-2"></i>Pending Crew Allocations
+                </h5>
+                <p class="text-muted small mb-0">Reservations awaiting naturalist guide and 4x4 cruiser assignment</p>
+            </div>
+            <span class="badge" th:classappend="${#lists.isEmpty(unassignedBookings)} ? 'badge-safari-olive' : 'bg-warning text-dark'"
+                  th:text="${#lists.size(unassignedBookings)} + ' Pending'">0 Pending</span>
+        </div>
+
+        <div th:if="${#lists.isEmpty(unassignedBookings)}" class="alert alert-success d-flex align-items-center gap-2 mb-0 py-3">
+            <i class="bi bi-check-circle-fill text-success fs-5"></i>
+            <div><strong>All clear!</strong> Every active reservation has an assigned guide and cruiser.</div>
+        </div>
+
+        <div th:if="${!#lists.isEmpty(unassignedBookings)}" class="table-responsive">
+            <table class="safari-table align-middle">
+                <thead>
+                <tr>
+                    <th>Booking Ref</th>
+                    <th>Guest Details</th>
+                    <th>Safari Package</th>
+                    <th>Park</th>
+                    <th>Trip Date</th>
+                    <th>Pax</th>
+                    <th>Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="ub : ${unassignedBookings}">
+                    <td class="fw-bold">
+                        <a th:href="@{'/bookings/confirmation/' + ${ub.bookingReference}}" class="text-decoration-none" style="color: var(--safari-olive-dark);" th:text="${ub.bookingReference}">WS-1234</a>
+                    </td>
+                    <td>
+                        <div class="fw-semibold" th:text="${ub.customerName}">Kavinda Perera</div>
+                        <div class="small text-muted" th:text="${ub.customerPhone}">0777654321</div>
+                    </td>
+                    <td class="small fw-semibold" th:text="${ub.safariPackage.name}">Package Name</td>
+                    <td>
+                        <span class="badge badge-safari-cream" th:text="${ub.safariPackage.nationalPark}">Yala</span>
+                    </td>
+                    <td class="fw-bold text-primary" th:text="${ub.tripDate}">2026-09-25</td>
+                    <td>
+                        <span class="badge badge-safari-olive" th:text="${ub.participantCount} + ' Pax'">2 Pax</span>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-safari-primary"
+                                th:onclick="'prepareAssignModal(' + ${ub.id} + ')'">
+                            <i class="bi bi-person-plus me-1"></i>+ Assign Crew
+                        </button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- Active Allocations Table -->
-    <div class="safari-card p-4 mb-5">
-        <h5 class="fw-bold mb-3">Active Dispatch Allocations</h5>
+    <div class="safari-card p-4 mb-5 shadow-sm">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-check2-circle text-success me-2"></i>Active Dispatch Allocations
+                </h5>
+                <p class="text-muted small mb-0">Currently assigned guides and safari cruisers ready for dispatch</p>
+            </div>
+            <span class="badge badge-safari-olive" th:text="${#lists.size(allocations)} + ' Assigned'">0 Assigned</span>
+        </div>
         <div class="table-responsive">
             <table class="safari-table">
                 <thead>
@@ -122,47 +222,62 @@
 </th:block>
 
 <!-- Modal: Assign Crew to Booking -->
-<div class="modal fade" id="assignCrewModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+<div class="modal fade" id="assignCrewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 rounded-4 shadow">
             <div class="modal-header border-bottom px-4 py-3">
-                <h5 class="modal-title fw-bold">Assign Naturalist & Vehicle</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-calendar-check text-success me-2"></i>Assign Naturalist & 4x4 Cruiser
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form th:action="@{/allocation/assign}" method="post">
                 <div class="modal-body px-4 py-3">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Select Target Reservation</label>
-                        <select name="bookingId" class="form-select safari-input" required>
-                            <option th:each="b : ${bookings}"
-                                    th:if="${b.bookingStatus != 'CANCELLED'}"
-                                    th:value="${b.id}"
-                                    th:text="${b.bookingReference} + ' - ' + ${b.safariPackage.name} + ' (' + ${b.tripDate} + ') - ' + ${b.customerName}">
-                            </option>
+                        <select id="targetBookingSelect" name="bookingId" class="form-select safari-input" required>
+                            <optgroup th:if="${!#lists.isEmpty(unassignedBookings)}" label="⚠️ Awaiting Allocation (Action Required)">
+                                <option th:each="b : ${unassignedBookings}"
+                                        th:value="${b.id}"
+                                        th:text="'⭐ ' + ${b.bookingReference} + ' — ' + ${b.safariPackage.nationalPark} + ' (' + ${b.tripDate} + ') — ' + ${b.participantCount} + ' Pax — ' + ${b.customerName}">
+                                </option>
+                            </optgroup>
+                            <optgroup th:if="${!#lists.isEmpty(assignedBookings)}" label="✓ Already Allocated (Re-allocation / Override)">
+                                <option th:each="b : ${assignedBookings}"
+                                        th:value="${b.id}"
+                                        th:text="'✓ ' + ${b.bookingReference} + ' — ' + ${b.safariPackage.nationalPark} + ' (' + ${b.tripDate} + ') — ' + ${b.customerName}">
+                                </option>
+                            </optgroup>
                         </select>
+                        <small class="text-muted">⭐ indicates pending reservations awaiting naturalist and cruiser allocation.</small>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold">Assign DWC Licensed Guide</label>
+                            <select name="guideId" class="form-select safari-input" required>
+                                <option value="" disabled selected>-- Select Naturalist Guide --</option>
+                                <option th:each="g : ${guides}" th:value="${g.id}" th:text="${g.fullName} + ' (' + ${g.languages} + ')'"></option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold">Assign 4x4 Safari Cruiser</label>
+                            <select name="vehicleId" class="form-select safari-input" required>
+                                <option value="" disabled selected>-- Select 4x4 Cruiser --</option>
+                                <option th:each="v : ${vehicles}" th:value="${v.id}" th:text="${v.vehicleModel} + ' [' + ${v.registrationNumber} + '] - ' + ${v.capacity} + ' Pax'"></option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Assign DWC Licensed Guide</label>
-                        <select name="guideId" class="form-select safari-input" required>
-                            <option th:each="g : ${guides}" th:value="${g.id}" th:text="${g.fullName} + ' (' + ${g.languages} + ')'"></option>
-                        </select>
+                        <label class="form-label small fw-bold">Dispatch Notes / Special Instructions <i class="bi bi-info-circle text-muted ms-1" title="e.g. VIP clients, sunrise departure from park gate..."></i></label>
+                        <textarea name="dispatchNotes" class="form-control safari-input" rows="2" placeholder="e.g. VIP clients, sunrise departure from park gate, camera gear assistance..."></textarea>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Assign 4x4 Safari Cruiser</label>
-                        <select name="vehicleId" class="form-select safari-input" required>
-                            <option th:each="v : ${vehicles}" th:value="${v.id}" th:text="${v.vehicleModel} + ' [' + ${v.registrationNumber} + '] - ' + ${v.capacity} + ' Pax'"></option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Dispatch Notes / Special Instructions <i class="bi bi-info-circle text-muted ms-1" title="e.g. VIP clients, sunrise departure from gate..."></i></label>
-                        <textarea name="dispatchNotes" class="form-control safari-input" rows="2"></textarea>
-                    </div>
-
-                    <div class="alert alert-info py-2 small mb-0">
-                        ⚡ <strong>Conflict Detection Engine:</strong> System automatically prevents double-booking if the guide or cruiser is already allocated on the trip date.
+                    <div class="alert alert-info py-2 small mb-0 d-flex align-items-center gap-2">
+                        <i class="bi bi-shield-check fs-5 text-primary"></i>
+                        <div><strong>Automated Conflict Detection Engine:</strong> System will check if the selected guide or vehicle is already scheduled on the trip date.</div>
                     </div>
                 </div>
                 <div class="modal-footer border-top px-4 py-3">
@@ -173,6 +288,20 @@
         </div>
     </div>
 </div>
+
+<script>
+    function prepareAssignModal(bookingId) {
+        var selectElem = document.getElementById('targetBookingSelect');
+        if (selectElem) {
+            selectElem.value = bookingId;
+        }
+        var modalElem = document.getElementById('assignCrewModal');
+        if (modalElem) {
+            var modal = bootstrap.Modal.getOrCreateInstance(modalElem);
+            modal.show();
+        }
+    }
+</script>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

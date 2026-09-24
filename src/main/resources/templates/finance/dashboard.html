@@ -128,7 +128,12 @@
                             <a th:href="@{'/finance/invoice/' + ${inv.id}}" class="btn btn-sm btn-outline-secondary" title="View / Print">Print</a>
                             <form th:if="${inv.status == 'ISSUED'}" th:action="@{'/finance/invoice/void/' + ${inv.id}}" method="post" style="display:inline;">
                                 <input type="hidden" name="reason" value="Audited operational adjustment">
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Void" onclick="return confirm('Void this tax invoice?')">Void</button>
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Void" onclick="return confirm('Void this tax invoice?')">Void</button>
+                            </form>
+                            <form th:action="@{'/finance/invoice/delete/' + ${inv.id}}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Invoice" onclick="return confirm('Permanently delete this tax invoice?')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </form>
                         </div>
                     </td>
@@ -169,20 +174,27 @@
                         <span class="badge" th:classappend="${pay.paymentStatus == 'PAID'} ? 'badge-safari-olive' : (${pay.paymentStatus == 'REFUNDED'} ? 'bg-secondary' : 'badge-safari-rose')" th:text="${pay.paymentStatus}">PAID</span>
                     </td>
                     <td>
-                        <div class="d-flex gap-1" th:if="${pay.paymentStatus == 'PENDING'}">
-                            <form th:action="@{'/finance/verify/' + ${pay.id}}" method="post" style="display:inline;">
-                                <input type="hidden" name="approve" value="true">
-                                <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                        <div class="d-flex gap-1 align-items-center">
+                            <div th:if="${pay.paymentStatus == 'PENDING'}" class="d-flex gap-1">
+                                <form th:action="@{'/finance/verify/' + ${pay.id}}" method="post" style="display:inline;">
+                                    <input type="hidden" name="approve" value="true">
+                                    <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                </form>
+                                <form th:action="@{'/finance/verify/' + ${pay.id}}" method="post" style="display:inline;">
+                                    <input type="hidden" name="approve" value="false">
+                                    <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+                                </form>
+                            </div>
+                            <form th:if="${pay.paymentStatus == 'PAID' and pay.booking.bookingStatus == 'CANCELLED'}"
+                                  th:action="@{'/finance/refund/' + ${pay.id}}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Process refund for cancelled booking?')">Refund</button>
                             </form>
-                            <form th:action="@{'/finance/verify/' + ${pay.id}}" method="post" style="display:inline;">
-                                <input type="hidden" name="approve" value="false">
-                                <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+                            <form th:action="@{'/finance/payment/delete/' + ${pay.id}}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Transaction" onclick="return confirm('Permanently delete this payment transaction? Linked invoices will also be removed.')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </form>
                         </div>
-                        <form th:if="${pay.paymentStatus == 'PAID' and pay.booking.bookingStatus == 'CANCELLED'}"
-                              th:action="@{'/finance/refund/' + ${pay.id}}" method="post" style="display:inline;">
-                            <button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Process refund for cancelled booking?')">Refund</button>
-                        </form>
                     </td>
                 </tr>
                 </tbody>

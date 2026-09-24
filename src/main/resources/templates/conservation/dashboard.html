@@ -82,6 +82,7 @@
                     <th>Count</th>
                     <th>Observed Behavior</th>
                     <th>Integrity Status</th>
+                    <th>Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -94,6 +95,13 @@
                     <td class="small" th:text="${s.observedBehavior}">Resting on rock outcrop...</td>
                     <td>
                         <span class="badge badge-safari-olive">SUBMITTED (LOCKED)</span>
+                    </td>
+                    <td>
+                        <form th:action="@{'/conservation/sightings/delete/' + ${s.id}}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Sighting" onclick="return confirm('Delete this wildlife sighting record?')">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 </tbody>
@@ -116,6 +124,7 @@
                     <th>DWC Levies (LKR)</th>
                     <th>Issuing Ranger</th>
                     <th>Status</th>
+                    <th>Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -129,7 +138,28 @@
                     <td><span th:text="${p.visitorCount}">2</span> Visitors</td>
                     <td class="fw-semibold" th:text="${#numbers.formatDecimal(p.totalFeeLkr, 0, 'COMMA', 2, 'POINT')}">11,500.00</td>
                     <td th:text="${p.issuingOfficer}">Ranger Pradeep Bandara</td>
-                    <td><span class="badge badge-safari-olive" th:text="${p.status}">ISSUED</span></td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${p.status == 'VALID' or p.status == 'ISSUED'} ? 'badge-safari-olive' : (${p.status == 'EXPIRED'} ? 'badge-safari-rose' : 'bg-secondary')"
+                              th:text="${p.status}">ISSUED</span>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1 align-items-center">
+                            <form th:action="@{'/conservation/permits/update-status/' + ${p.id}}" method="post" style="display:inline;">
+                                <input type="hidden" name="status" th:value="${p.status == 'VALID' or p.status == 'ISSUED' ? 'EXPIRED' : 'VALID'}">
+                                <button type="submit" class="btn btn-sm"
+                                        th:classappend="${p.status == 'VALID' or p.status == 'ISSUED' ? 'btn-outline-warning' : 'btn-outline-success'}"
+                                        th:title="${p.status == 'VALID' or p.status == 'ISSUED' ? 'Mark as EXPIRED' : 'Mark as VALID'}">
+                                    <span th:text="${p.status == 'VALID' or p.status == 'ISSUED' ? 'Expire' : 'Activate'}">Toggle</span>
+                                </button>
+                            </form>
+                            <form th:action="@{'/conservation/permits/delete/' + ${p.id}}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Permit" onclick="return confirm('Delete this park permit?')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
                 </tr>
                 </tbody>
             </table>
@@ -147,9 +177,11 @@
                     <th>Park Location</th>
                     <th>Type</th>
                     <th>Severity</th>
+                    <th>Status</th>
                     <th>Description</th>
                     <th>Action Taken</th>
                     <th>Date</th>
+                    <th>Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -162,15 +194,71 @@
                               th:classappend="${inc.severity == 'CRITICAL'} ? 'bg-danger' : (${inc.severity == 'HIGH'} ? 'bg-warning text-dark' : 'badge-safari-cream')"
                               th:text="${inc.severity}">LOW</span>
                     </td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${inc.status == 'RESOLVED'} ? 'badge-safari-olive' : (${inc.status == 'UNDER_INVESTIGATION'} ? 'bg-warning text-dark' : 'badge-safari-rose')"
+                              th:text="${inc.status}">SUBMITTED</span>
+                    </td>
                     <td class="small" th:text="${inc.description}">External safari vehicle deviated...</td>
                     <td class="small text-muted" th:text="${inc.actionTaken}">Verbal warning issued...</td>
                     <td class="small text-muted" th:text="${inc.reportedDate}">2026-09-19</td>
+                    <td>
+                        <div class="d-flex gap-1 align-items-center">
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal" th:data-bs-target="'#editIncidentModal' + ${inc.id}" title="Update Status">
+                                Status
+                            </button>
+                            <form th:action="@{'/conservation/incidents/delete/' + ${inc.id}}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Incident" onclick="return confirm('Delete this incident report?')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
                 </tr>
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
+<!-- Incident Status Update Modals -->
+<th:block th:each="inc : ${incidents}">
+    <div class="modal fade" th:id="'editIncidentModal' + ${inc.id}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-bottom px-4 py-3">
+                    <h5 class="modal-title fw-bold">Update Incident: <span class="text-primary" th:text="${inc.incidentNumber}">INC-123</span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form th:action="@{'/conservation/incidents/update-status/' + ${inc.id}}" method="post">
+                    <div class="modal-body px-4 py-3">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Incident Type & Location</label>
+                            <input type="text" class="form-control bg-light" th:value="${inc.incidentType} + ' - ' + ${inc.parkName}" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Investigation Status</label>
+                            <select name="status" class="form-select safari-input" required>
+                                <option value="SUBMITTED" th:selected="${inc.status == 'SUBMITTED'}">SUBMITTED (Pending Review)</option>
+                                <option value="UNDER_INVESTIGATION" th:selected="${inc.status == 'UNDER_INVESTIGATION'}">UNDER_INVESTIGATION (In Progress)</option>
+                                <option value="RESOLVED" th:selected="${inc.status == 'RESOLVED'}">RESOLVED (Case Closed)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Action Taken / Resolution Notes</label>
+                            <textarea name="actionTaken" class="form-control safari-input" rows="3" th:text="${inc.actionTaken}" placeholder="Enter corrective measures, fines levied, or outcome..." required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top px-4 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-safari-primary">Save Status</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</th:block>
 
 <!-- Modal: Issue Park Permit -->
 <div class="modal fade" id="issuePermitModal" tabindex="-1">

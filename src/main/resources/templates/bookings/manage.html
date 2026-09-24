@@ -63,7 +63,14 @@
                               th:text="${b.paymentStatus}">UNPAID</span>
                     </td>
                     <td>
-                        <a th:href="@{'/bookings/confirmation/' + ${b.bookingReference}}" class="btn btn-sm btn-outline-secondary">View</a>
+                        <div class="d-flex gap-1">
+                            <a th:href="@{'/bookings/confirmation/' + ${b.bookingReference}}" class="btn btn-sm btn-outline-secondary" title="View Details">View</a>
+                            <button th:if="${b.bookingStatus != 'CANCELLED'}" type="button" class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal" th:data-bs-target="'#manageEditBookingModal' + ${b.id}" title="Edit Booking">Edit</button>
+                            <form th:if="${b.bookingStatus != 'CANCELLED'}" th:action="@{'/bookings/cancel/' + ${b.id}}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel Booking" onclick="return confirm('Cancel this reservation?')">Cancel</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 </tbody>
@@ -71,6 +78,48 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Booking Modals for Staff Management -->
+<th:block th:each="b : ${bookings}">
+    <div th:if="${b.bookingStatus != 'CANCELLED'}" class="modal fade" th:id="'manageEditBookingModal' + ${b.id}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-bottom px-4 py-3">
+                    <h5 class="modal-title fw-bold">Edit Reservation: <span class="text-primary" th:text="${b.bookingReference}">WS-1234</span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form th:action="@{'/bookings/update/' + ${b.id}}" method="post">
+                    <div class="modal-body px-4 py-3">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Guest Name</label>
+                            <input type="text" class="form-control bg-light" th:value="${b.customerName}" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Safari Package</label>
+                            <input type="text" class="form-control bg-light" th:value="${b.safariPackage.name}" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Trip Date</label>
+                            <input type="date" name="tripDate" class="form-control safari-input" th:value="${b.tripDate}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Participant Count (Pax)</label>
+                            <input type="number" name="participantCount" class="form-control safari-input" th:value="${b.participantCount}" min="1" max="10" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Special Requests / Notes</label>
+                            <textarea name="specialRequests" class="form-control safari-input" rows="2" th:text="${b.specialRequests}"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top px-4 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-safari-primary">Update Reservation</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</th:block>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
