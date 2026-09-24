@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wild Safari — SE2030 Group 03 CRUD Reference</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --olive-dark: #4a6434; --olive-light: #eef4e8;
+      --rose: #c97b84; --rose-light: #fdf0f1;
+      --amber: #d97706; --amber-light: #fffbeb;
+      --blue: #3b82f6; --blue-light: #eff6ff;
+      --purple: #7c3aed; --purple-light: #f5f3ff;
+      --teal: #0d9488; --teal-light: #f0fdfa;
+      --bg: #f8f7f4; --card: #ffffff;
+      --text: #1a1a1a; --muted: #6b7280; --border: #e5e7eb;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); padding: 16px; line-height: 1.5; }
+    .header { background: linear-gradient(135deg, var(--olive-dark) 0%, #2d4a1e 100%); border-radius: 20px; padding: 24px 20px; text-align: center; margin-bottom: 20px; position: relative; overflow: hidden; }
+    .header::before { content: '🌿'; font-size: 80px; position: absolute; top: -10px; right: -10px; opacity: 0.15; }
+    .header h1 { color: #fff; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .header p { color: rgba(255,255,255,0.75); font-size: 13px; margin-top: 6px; }
+    .badge-row { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .badge-row span { background: rgba(255,255,255,0.15); color: #fff; font-size: 11px; padding: 4px 10px; border-radius: 99px; border: 1px solid rgba(255,255,255,0.25); }
+    .legend { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; padding: 14px 16px; background: var(--card); border-radius: 14px; border: 1px solid var(--border); }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .dot-c { background: #22c55e; } .dot-r { background: #3b82f6; } .dot-u { background: #f59e0b; } .dot-d { background: #ef4444; }
+    .module-card { background: var(--card); border-radius: 18px; margin-bottom: 16px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .module-header { padding: 16px 18px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); }
+    .module-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+    .module-meta { flex: 1; min-width: 0; }
+    .module-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .module-person { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .module-badge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
+    .crud-list { padding: 0 18px 16px; }
+    .crud-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px dashed var(--border); align-items: flex-start; }
+    .crud-item:last-child { border-bottom: none; }
+    .crud-tag { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; flex-shrink: 0; margin-top: 2px; letter-spacing: 0.5px; }
+    .tag-c { background: #dcfce7; color: #15803d; }
+    .tag-r { background: #dbeafe; color: #1d4ed8; }
+    .tag-u { background: #fef3c7; color: #b45309; }
+    .tag-d { background: #fee2e2; color: #b91c1c; }
+    .crud-content { flex: 1; min-width: 0; }
+    .crud-action { font-size: 13px; font-weight: 600; color: var(--text); }
+    .crud-desc { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+    .db-section { background: var(--bg); margin: 0 18px 16px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); }
+    .db-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+    .db-tables { display: flex; flex-wrap: wrap; gap: 6px; }
+    .db-table { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 8px; }
+    .theme-1 .module-icon { background: #eef4e8; }
+    .theme-1 .module-badge { background: #eef4e8; color: var(--olive-dark); }
+    .theme-1 .db-table { background: #eef4e8; color: var(--olive-dark); }
+    .theme-2 .module-icon { background: var(--blue-light); }
+    .theme-2 .module-badge { background: var(--blue-light); color: var(--blue); }
+    .theme-2 .db-table { background: var(--blue-light); color: var(--blue); }
+    .theme-3 .module-icon { background: var(--amber-light); }
+    .theme-3 .module-badge { background: var(--amber-light); color: var(--amber); }
+    .theme-3 .db-table { background: var(--amber-light); color: var(--amber); }
+    .theme-4 .module-icon { background: var(--teal-light); }
+    .theme-4 .module-badge { background: var(--teal-light); color: var(--teal); }
+    .theme-4 .db-table { background: var(--teal-light); color: var(--teal); }
+    .theme-5 .module-icon { background: var(--purple-light); }
+    .theme-5 .module-badge { background: var(--purple-light); color: var(--purple); }
+    .theme-5 .db-table { background: var(--purple-light); color: var(--purple); }
+    .theme-6 .module-icon { background: var(--rose-light); }
+    .theme-6 .module-badge { background: var(--rose-light); color: var(--rose); }
+    .theme-6 .db-table { background: var(--rose-light); color: var(--rose); }
+    .footer { text-align: center; padding: 16px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .footer strong { color: var(--olive-dark); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🌿 Wild Safari — CRUD Reference</h1>
+  <p>SE2030 Group 03 · Software Engineering Project</p>
+  <div class="badge-row">
+    <span>Spring Boot 3</span>
+    <span>MySQL / JPA</span>
+    <span>Thymeleaf</span>
+    <span>Java 17</span>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="dot dot-c"></span> Create</div>
+  <div class="legend-item"><span class="dot dot-r"></span> Read</div>
+  <div class="legend-item"><span class="dot dot-u"></span> Update</div>
+  <div class="legend-item"><span class="dot dot-d"></span> Delete</div>
+</div>
+
+<!-- MODULE 1: PACKAGE MANAGEMENT -->
+<div class="module-card theme-1">
+  <div class="module-header">
+    <div class="module-icon">📦</div>
+    <div class="module-meta">
+      <div class="module-name">Safari Package Management</div>
+      <div class="module-person">Gallage S.P · IT25101916 · Tour Operator</div>
+    </div>
+    <span class="module-badge">Module 1</span>
+  </div>
+  <div class="crud-list">
+    <div class="crud-item">
+      <span class="crud-tag tag-c">CREATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Add New Safari Package</div>
+        <div class="crud-desc">Package Name, National Park, Base Price, Duration, Max Group Size, Itinerary, Cover Image, Peak Season Multiplier</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-r">READ</span>
+      <div class="crud-content">
+        <div class="crud-action">Browse Packages / View Details / Manage List</div>
+        <div class="crud-desc">All tourists can browse packages. Operators view their manage dashboard with pricing details.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-u">UPDATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Edit Package / Toggle Status</div>
+        <div class="crud-desc">Modify pricing, description, images. Toggle package status: ACTIVE vs DISCONTINUED.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-d">DELETE</span>
+      <div class="crud-content">
+        <div class="crud-action">Delete Package Permanently</div>
+        <div class="crud-desc">Remove unused or outdated safari packages from the system.</div>
+      </div>
+    </div>
+  </div>
+  <div class="db-section">
+    <div class="db-title">Related Database Tables</div>
+    <div class="db-tables">
+      <span class="db-table">🗄 safari_packages</span>
+    </div>
+  </div>
+</div>
+
+<!-- MODULE 2: BOOKING MANAGEMENT -->
+<div class="module-card theme-2">
+  <div class="module-header">
+    <div class="module-icon">🎫</div>
+    <div class="module-meta">
+      <div class="module-name">Booking &amp; Reservation Management</div>
+      <div class="module-person">Customer / Operator</div>
+    </div>
+    <span class="module-badge">Module 2</span>
+  </div>
+  <div class="crud-list">
+    <div class="crud-item">
+      <span class="crud-tag tag-c">CREATE</span>
+      <div class="crud-content">
+        <div class="crud-action">New Booking / Equipment Rental Request</div>
+        <div class="crud-desc">Customer creates booking with participant details, trip date, special requests. Equipment rental submitted with booking.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-r">READ</span>
+      <div class="crud-content">
+        <div class="crud-action">My Bookings / Voucher / Manage All Bookings</div>
+        <div class="crud-desc">Customer sees their bookings and vouchers. Operators see the master reservation registry.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-u">UPDATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Modify Reservation (Date / Pax / Requests)</div>
+        <div class="crud-desc">Edit trip date, participant count, special requests. Total price auto-recalculates on save.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-d">DELETE</span>
+      <div class="crud-content">
+        <div class="crud-action">Cancel Booking</div>
+        <div class="crud-desc">Sets booking status to CANCELLED. Historical record retained (soft cancel). Paid bookings trigger REFUND_PENDING.</div>
+      </div>
+    </div>
+  </div>
+  <div class="db-section">
+    <div class="db-title">Related Database Tables</div>
+    <div class="db-tables">
+      <span class="db-table">🗄 bookings</span>
+      <span class="db-table">🗄 booking_participants</span>
+    </div>
+  </div>
+</div>
+
+<!-- MODULE 3: ALLOCATION MANAGEMENT -->
+<div class="module-card theme-3">
+  <div class="module-header">
+    <div class="module-icon">🚙</div>
+    <div class="module-meta">
+      <div class="module-name">Guide &amp; Vehicle Fleet Allocation</div>
+      <div class="module-person">Kalhara N.O · IT25100156 · Operations Manager</div>
+    </div>
+    <span class="module-badge">Module 3</span>
+  </div>
+  <div class="crud-list">
+    <div class="crud-item">
+      <span class="crud-tag tag-c">CREATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Assign Crew / Add Guide / Add Vehicle</div>
+        <div class="crud-desc">Assign a DWC Licensed Naturalist Guide and 4x4 Safari Cruiser to a confirmed booking. Register new guides and fleet vehicles.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-r">READ</span>
+      <div class="crud-content">
+        <div class="crud-action">Allocation Dashboard / Guides List / Vehicles List</div>
+        <div class="crud-desc">View pending allocations queue, active dispatch with guide/vehicle details, KPI summary cards.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-u">UPDATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Reassign Guide / Reassign Vehicle / Set Maintenance</div>
+        <div class="crud-desc">Emergency reassign due to guide illness or breakdown. Set vehicle to MAINTENANCE. Conflict detection prevents double-booking.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-d">DELETE</span>
+      <div class="crud-content">
+        <div class="crud-action">Deallocate Crew from Trip</div>
+        <div class="crud-desc">Remove an existing crew allocation from a safari trip booking.</div>
+      </div>
+    </div>
+  </div>
+  <div class="db-section">
+    <div class="db-title">Related Database Tables</div>
+    <div class="db-tables">
+      <span class="db-table">🗄 trip_allocations</span>
+      <span class="db-table">🗄 guides</span>
+      <span class="db-table">🗄 vehicles</span>
+    </div>
+  </div>
+</div>
+
+<!-- MODULE 4: CONSERVATION MANAGEMENT -->
+<div class="module-card theme-4">
+  <div class="module-header">
+    <div class="module-icon">🦁</div>
+    <div class="module-meta">
+      <div class="module-name">Conservation &amp; Compliance Management</div>
+      <div class="module-person">Gunawardhana M.S · IT25101131 · Conservation Officer</div>
+    </div>
+    <span class="module-badge">Module 4</span>
+  </div>
+  <div class="crud-list">
+    <div class="crud-item">
+      <span class="crud-tag tag-c">CREATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Issue Park Permit / Record Sighting / File Incident</div>
+        <div class="crud-desc">Issue DWC entry permits (auto-generates permit number). Log wildlife sightings. File safety incident reports with severity levels.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-r">READ</span>
+      <div class="crud-content">
+        <div class="crud-action">Conservation Dashboard (Permits / Sightings / Incidents)</div>
+        <div class="crud-desc">View all permits, wildlife sightings log, incident register with compliance summary metrics.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-u">UPDATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Update Permit Status / Incident Investigation Status</div>
+        <div class="crud-desc">Toggle permit: ISSUED vs EXPIRED. Update incident: SUBMITTED → UNDER_INVESTIGATION → RESOLVED with action taken notes.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-d">DELETE</span>
+      <div class="crud-content">
+        <div class="crud-action">Delete Permit / Incident / Sighting</div>
+        <div class="crud-desc">Remove expired or erroneous permit records, incorrect incident reports, or invalid wildlife sighting entries.</div>
+      </div>
+    </div>
+  </div>
+  <div class="db-section">
+    <div class="db-title">Related Database Tables</div>
+    <div class="db-tables">
+      <span class="db-table">🗄 park_permits</span>
+      <span class="db-table">🗄 wildlife_sightings</span>
+      <span class="db-table">🗄 incident_reports</span>
+    </div>
+  </div>
+</div>
+
+<!-- MODULE 5: INVENTORY MANAGEMENT -->
+<div class="module-card theme-5">
+  <div class="module-header">
+    <div class="module-icon">🎒</div>
+    <div class="module-meta">
+      <div class="module-name">Inventory &amp; Equipment Management</div>
+      <div class="module-person">Dimalsha K.G.T · IT25101218 · Logistics Staff</div>
+    </div>
+    <span class="module-badge">Module 5</span>
+  </div>
+  <div class="crud-list">
+    <div class="crud-item">
+      <span class="crud-tag tag-c">CREATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Add Equipment to Stock / Issue to Trip</div>
+        <div class="crud-desc">Add new equipment items (Binoculars, Tents, GPS, First Aid kits). Approve and issue requested equipment to a safari booking.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-r">READ</span>
+      <div class="crud-content">
+        <div class="crud-action">Inventory Dashboard (Stock / Issued / Low-Stock Alerts)</div>
+        <div class="crud-desc">View current stock levels, items issued to trips, pending rental requests, and low-stock warnings.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-u">UPDATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Adjust Stock / Toggle Status / Mark Returned</div>
+        <div class="crud-desc">Adjust stock quantity (+/-). Set item Available vs Unavailable. Mark issued equipment as RETURNED after the safari trip.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-d">DELETE</span>
+      <div class="crud-content">
+        <div class="crud-action">Delete Equipment Item</div>
+        <div class="crud-desc">Remove damaged, broken, or decommissioned equipment from the inventory.</div>
+      </div>
+    </div>
+  </div>
+  <div class="db-section">
+    <div class="db-title">Related Database Tables</div>
+    <div class="db-tables">
+      <span class="db-table">🗄 equipment</span>
+      <span class="db-table">🗄 equipment_allocations</span>
+    </div>
+  </div>
+</div>
+
+<!-- MODULE 6: FINANCE MANAGEMENT -->
+<div class="module-card theme-6">
+  <div class="module-header">
+    <div class="module-icon">💳</div>
+    <div class="module-meta">
+      <div class="module-name">Payment &amp; Invoice Processing</div>
+      <div class="module-person">Patabendi M.K.K · IT25101973 · Finance Officer</div>
+    </div>
+    <span class="module-badge">Module 6</span>
+  </div>
+  <div class="crud-list">
+    <div class="crud-item">
+      <span class="crud-tag tag-c">CREATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Process Payment / Generate Invoice</div>
+        <div class="crud-desc">Customer pays via Card or Bank Transfer (slip upload). System auto-generates 10% VAT Tax Invoice upon approval using Factory Pattern.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-r">READ</span>
+      <div class="crud-content">
+        <div class="crud-action">Finance Dashboard / View Invoice / Revenue Report</div>
+        <div class="crud-desc">View total revenue, pending bank transfers, all payment transactions, generated tax invoices list.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-u">UPDATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Approve / Reject Bank Transfer / Process Refund / Void Invoice</div>
+        <div class="crud-desc">Finance officer verifies uploaded bank slips (Approve = PAID / Reject). Refund processed for cancelled bookings. Invoice can be VOID'd.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-d">DELETE</span>
+      <div class="crud-content">
+        <div class="crud-action">Delete Tax Invoice / Delete Payment Transaction</div>
+        <div class="crud-desc">Permanently delete erroneous invoices. Delete payment transactions (linked invoices auto-removed to maintain DB integrity).</div>
+      </div>
+    </div>
+  </div>
+  <div class="db-section">
+    <div class="db-title">Related Database Tables</div>
+    <div class="db-tables">
+      <span class="db-table">🗄 payments</span>
+      <span class="db-table">🗄 invoices</span>
+    </div>
+  </div>
+</div>
+
+<!-- SYSTEM CORE -->
+<div class="module-card theme-1" style="border-color: #c6d9bb;">
+  <div class="module-header">
+    <div class="module-icon">🔐</div>
+    <div class="module-meta">
+      <div class="module-name">User Management &amp; System Admin</div>
+      <div class="module-person">System Core · Admin Role · All Members</div>
+    </div>
+    <span class="module-badge">Core</span>
+  </div>
+  <div class="crud-list">
+    <div class="crud-item">
+      <span class="crud-tag tag-c">CREATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Create Staff Accounts / Register Customer</div>
+        <div class="crud-desc">Admin creates system staff accounts (Operator, Ranger, Finance, Logistics). Customers self-register via /register.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-r">READ</span>
+      <div class="crud-content">
+        <div class="crud-action">Admin Dashboard / Users / Activity Logs / DB Viewer</div>
+        <div class="crud-desc">View KPI overview, all user accounts, system-wide audit trail (Observer Pattern logs), raw database viewer.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-u">UPDATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Edit User Role / Contact / Password / Profile Avatar</div>
+        <div class="crud-desc">Admin can edit any user's role, name, contact. Any user can update their own profile and avatar image.</div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-d">DELETE</span>
+      <div class="crud-content">
+        <div class="crud-action">Delete Staff Account</div>
+        <div class="crud-desc">Admin permanently removes departed staff accounts from the system.</div>
+      </div>
+    </div>
+  </div>
+  <div class="db-section">
+    <div class="db-title">Related Database Tables</div>
+    <div class="db-tables">
+      <span class="db-table">🗄 users</span>
+      <span class="db-table">🗄 activity_logs</span>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <strong>Wild Safari Trip Management System</strong><br>
+  SE2030 · Group 03 · Java 17 + Spring Boot 3 + MySQL
+</div>
+
+</body>
+</html>

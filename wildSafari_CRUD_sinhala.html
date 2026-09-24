@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wild Safari — CRUD සිංහල සටහන</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --olive-dark: #4a6434; --olive-light: #eef4e8;
+      --rose: #c97b84; --rose-light: #fdf0f1;
+      --amber: #d97706; --amber-light: #fffbeb;
+      --blue: #3b82f6; --blue-light: #eff6ff;
+      --purple: #7c3aed; --purple-light: #f5f3ff;
+      --teal: #0d9488; --teal-light: #f0fdfa;
+      --bg: #f8f7f4; --card: #ffffff;
+      --text: #1a1a1a; --muted: #6b7280; --border: #e5e7eb;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); padding: 16px; line-height: 1.6; }
+
+    .header { background: linear-gradient(135deg, #4a6434 0%, #2d4a1e 100%); border-radius: 20px; padding: 24px 20px; text-align: center; margin-bottom: 20px; position: relative; overflow: hidden; }
+    .header::before { content: '🌿'; font-size: 80px; position: absolute; top: -10px; right: -10px; opacity: 0.12; }
+    .header h1 { color: #fff; font-size: 20px; font-weight: 800; }
+    .header p { color: rgba(255,255,255,0.75); font-size: 13px; margin-top: 6px; }
+    .badge-row { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .badge-row span { background: rgba(255,255,255,0.15); color: #fff; font-size: 11px; padding: 4px 10px; border-radius: 99px; border: 1px solid rgba(255,255,255,0.25); }
+
+    .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; padding: 14px 16px; background: var(--card); border-radius: 14px; border: 1px solid var(--border); }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .dot-c { background: #22c55e; } .dot-r { background: #3b82f6; } .dot-u { background: #f59e0b; } .dot-d { background: #ef4444; }
+
+    .module-card { background: var(--card); border-radius: 18px; margin-bottom: 18px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    .module-header { padding: 16px 18px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); }
+    .module-icon { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+    .module-meta { flex: 1; min-width: 0; }
+    .module-name { font-size: 14px; font-weight: 800; color: var(--text); }
+    .module-si { font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+    .module-person { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .module-badge { font-size: 11px; font-weight: 700; padding: 5px 11px; border-radius: 99px; white-space: nowrap; }
+
+    .crud-list { padding: 4px 18px 14px; }
+    .crud-item { display: flex; gap: 12px; padding: 11px 0; border-bottom: 1px dashed var(--border); align-items: flex-start; }
+    .crud-item:last-child { border-bottom: none; }
+    .crud-tag { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 6px; flex-shrink: 0; margin-top: 3px; letter-spacing: 0.8px; }
+    .tag-c { background: #dcfce7; color: #15803d; }
+    .tag-r { background: #dbeafe; color: #1d4ed8; }
+    .tag-u { background: #fef3c7; color: #b45309; }
+    .tag-d { background: #fee2e2; color: #b91c1c; }
+    .crud-content { flex: 1; min-width: 0; }
+    .crud-action { font-size: 13px; font-weight: 700; color: var(--text); }
+    .crud-si { font-size: 12px; color: #374151; margin-top: 3px; font-weight: 500; }
+    .crud-desc { font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+    .db-section { background: #f3f4f6; margin: 0 18px 16px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); }
+    .db-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+    .db-tables { display: flex; flex-wrap: wrap; gap: 6px; }
+    .db-table { font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 8px; font-family: monospace; }
+
+    .theme-1 .module-icon { background: #eef4e8; }
+    .theme-1 .module-badge { background: #eef4e8; color: var(--olive-dark); }
+    .theme-1 .db-table { background: #eef4e8; color: var(--olive-dark); border: 1px solid #c6d9bb; }
+    .theme-2 .module-icon { background: var(--blue-light); }
+    .theme-2 .module-badge { background: var(--blue-light); color: var(--blue); }
+    .theme-2 .db-table { background: var(--blue-light); color: var(--blue); border: 1px solid #bfdbfe; }
+    .theme-3 .module-icon { background: var(--amber-light); }
+    .theme-3 .module-badge { background: var(--amber-light); color: var(--amber); }
+    .theme-3 .db-table { background: var(--amber-light); color: var(--amber); border: 1px solid #fde68a; }
+    .theme-4 .module-icon { background: var(--teal-light); }
+    .theme-4 .module-badge { background: var(--teal-light); color: var(--teal); }
+    .theme-4 .db-table { background: var(--teal-light); color: var(--teal); border: 1px solid #99f6e4; }
+    .theme-5 .module-icon { background: var(--purple-light); }
+    .theme-5 .module-badge { background: var(--purple-light); color: var(--purple); }
+    .theme-5 .db-table { background: var(--purple-light); color: var(--purple); border: 1px solid #ddd6fe; }
+    .theme-6 .module-icon { background: var(--rose-light); }
+    .theme-6 .module-badge { background: var(--rose-light); color: var(--rose); }
+    .theme-6 .db-table { background: var(--rose-light); color: var(--rose); border: 1px solid #fbcfe8; }
+
+    .footer { text-align: center; padding: 20px 16px; font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .footer strong { color: var(--olive-dark); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🌿 Wild Safari — CRUD සටහන</h1>
+  <p>SE2030 · Group 03 · Software Engineering Project</p>
+  <div class="badge-row">
+    <span>Spring Boot 3</span>
+    <span>MySQL / JPA</span>
+    <span>Thymeleaf</span>
+    <span>Java 17</span>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="dot dot-c"></span> C = Create (නව දත්ත ඇතුළු)</div>
+  <div class="legend-item"><span class="dot dot-r"></span> R = Read (බලන්න)</div>
+  <div class="legend-item"><span class="dot dot-u"></span> U = Update (වෙනස් කරන්න)</div>
+  <div class="legend-item"><span class="dot dot-d"></span> D = Delete (මකන්න)</div>
+</div>
+
+<!-- ══════════════════════ MODULE 1 ══════════════════════ -->
+<div class="module-card theme-1">
+  <div class="module-header">
+    <div class="module-icon">📦</div>
+    <div class="module-meta">
+      <div class="module-name">Package Management</div>
+      <div class="module-si">සෆාරි ඇසුරුම් කළමනාකරණය</div>
+      <div class="module-person">👤 Gallage S.P · IT25101916 · Tour Operator</div>
+    </div>
+    <span class="module-badge">Module 1</span>
+  </div>
+  <div class="crud-list">
+    <div class="crud-item">
+      <span class="crud-tag tag-c">CREATE</span>
+      <div class="crud-content">
+        <div class="crud-action">නව Package එකක් Add කිරීම</div>
+        <div class="crud-desc">Package name, national park, base price, duration, max group size, itinerary, cover image, peak season multiplier එකතු කරනවා. URL: <strong>/packages/add</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-r">READ</span>
+      <div class="crud-content">
+        <div class="crud-action">Packages බලන්න / Details බලන්න</div>
+        <div class="crud-desc">Tourist ලාට packages browse කරන්න, operator ලාට manage dashboard. URL: <strong>/packages</strong>, <strong>/packages/{id}</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-u">UPDATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Package Edit කිරීම / Status වෙනස් කිරීම</div>
+        <div class="crud-desc">Price, description, images edit කරනවා. Status: <strong>ACTIVE ↔ DISCONTINUED</strong>. URL: <strong>/packages/edit/{id}</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-d">DELETE</span>
+      <div class="crud-content">
+        <div class="crud-action">Package Delete කිරීම</div>
+        <div class="crud-desc">භාවිතා නොකරන, කල්ඉකුත් Package ඉවත් කරනවා. URL: <strong>/packages/delete/{id}</strong></div>
+      </div>
+    </div>
+  </div>
+  <div class="db-section">
+    <div class="db-title">DB Table</div>
+    <div class="db-tables">
+      <span class="db-table">safari_packages</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODULE 2 ══════════════════════ -->
+<div class="module-card theme-2">
+  <div class="module-header">
+    <div class="module-icon">🎫</div>
+    <div class="module-meta">
+      <div class="module-name">Booking Management</div>
+      <div class="module-si">Booking සහ Reservation කළමනාකරණය</div>
+      <div class="module-person">👤 Customer / Operator</div>
+    </div>
+    <span class="module-badge">Module 2</span>
+  </div>
+  <div class="crud-list">
+    <div class="crud-item">
+      <span class="crud-tag tag-c">CREATE</span>
+      <div class="crud-content">
+        <div class="crud-action">නව Booking එකක් / Equipment Rental Request</div>
+        <div class="crud-desc">Customer ට package book කරන්න, participant details, trip date, special requests ඇතුළු කරනවා. Equipment rental request ද booking සමඟ submit. URL: <strong>/bookings/create</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-r">READ</span>
+      <div class="crud-content">
+        <div class="crud-action">My Bookings / Voucher / Manage All Bookings</div>
+        <div class="crud-desc">Customer ට තමන්ගේ bookings, voucher බලන්න. Operator ට සියලු reservations. URL: <strong>/bookings/my</strong>, <strong>/bookings/manage</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-u">UPDATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Booking Modify කිරීම (Date / Pax / Requests)</div>
+        <div class="crud-desc">Trip date, participant count, special requests edit කරනවා. Save කළවිට total price auto-recalculate. URL: <strong>/bookings/update/{id}</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-d">DELETE</span>
+      <div class="crud-content">
+        <div class="crud-action">Booking Cancel කිරීම</div>
+        <div class="crud-desc">Status → <strong>CANCELLED</strong>. Historical record keep (soft cancel). Pay කළ bookings → <strong>REFUND_PENDING</strong>. URL: <strong>/bookings/cancel/{id}</strong></div>
+      </div>
+    </div>
+  </div>
+  <div class="db-section">
+    <div class="db-title">DB Tables</div>
+    <div class="db-tables">
+      <span class="db-table">bookings</span>
+      <span class="db-table">booking_participants</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODULE 3 ══════════════════════ -->
+<div class="module-card theme-3">
+  <div class="module-header">
+    <div class="module-icon">🚙</div>
+    <div class="module-meta">
+      <div class="module-name">Allocation Management</div>
+      <div class="module-si">Guide සහ Vehicle Fleet Allocation</div>
+      <div class="module-person">👤 Kalhara N.O · IT25100156 · Operations Manager</div>
+    </div>
+    <span class="module-badge">Module 3</span>
+  </div>
+  <div class="crud-list">
+    <div class="crud-item">
+      <span class="crud-tag tag-c">CREATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Crew Assign කිරීම / Guide Add / Vehicle Add</div>
+        <div class="crud-desc">Confirmed booking එකකට DWC Licensed Guide සහ 4x4 Safari Cruiser assign. නව guide, fleet vehicles register. URL: <strong>/allocations/assign</strong>, <strong>/guides/add</strong>, <strong>/vehicles/add</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-r">READ</span>
+      <div class="crud-content">
+        <div class="crud-action">Allocation Dashboard / Guides List / Vehicles List</div>
+        <div class="crud-desc">Pending allocations queue, active dispatch details, KPI summary cards. URL: <strong>/allocations/dashboard</strong>, <strong>/guides</strong>, <strong>/vehicles</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-u">UPDATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Reassign Guide / Reassign Vehicle / Maintenance Set</div>
+        <div class="crud-desc">Guide නිරෝගිතාව / vehicle breakdown නිසා emergency reassign. Vehicle status → <strong>MAINTENANCE</strong>. Conflict detection — double-booking prevent. URL: <strong>/allocations/assign</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-d">DELETE</span>
+      <div class="crud-content">
+        <div class="crud-action">Crew Deallocate කිරීම</div>
+        <div class="crud-desc">Trip booking එකෙන් crew allocation ඉවත් කිරීම. URL: <strong>/allocations/remove/{id}</strong></div>
+      </div>
+    </div>
+  </div>
+  <div class="db-section">
+    <div class="db-title">DB Tables</div>
+    <div class="db-tables">
+      <span class="db-table">trip_allocations</span>
+      <span class="db-table">guides</span>
+      <span class="db-table">vehicles</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODULE 4 ══════════════════════ -->
+<div class="module-card theme-4">
+  <div class="module-header">
+    <div class="module-icon">🦁</div>
+    <div class="module-meta">
+      <div class="module-name">Conservation Management</div>
+      <div class="module-si">Conservation සහ Compliance කළමනාකරණය</div>
+      <div class="module-person">👤 Gunawardhana M.S · IT25101131 · Conservation Officer</div>
+    </div>
+    <span class="module-badge">Module 4</span>
+  </div>
+  <div class="crud-list">
+    <div class="crud-item">
+      <span class="crud-tag tag-c">CREATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Park Permit නිකුත් / Wildlife Sighting Record / Incident File</div>
+        <div class="crud-desc">DWC entry permits නිකුත් (auto permit number). Wildlife sightings log. Safety incidents file with severity level. URL: <strong>/conservation/permits/add</strong>, <strong>/conservation/sightings/add</strong>, <strong>/conservation/incidents/add</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-r">READ</span>
+      <div class="crud-content">
+        <div class="crud-action">Conservation Dashboard (Permits / Sightings / Incidents)</div>
+        <div class="crud-desc">Permits, wildlife sightings log, incident register, compliance summary metrics. URL: <strong>/conservation/dashboard</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-u">UPDATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Permit Status / Incident Investigation Status Update</div>
+        <div class="crud-desc">Permit toggle: <strong>ISSUED ↔ EXPIRED</strong>. Incident status: <strong>SUBMITTED → UNDER_INVESTIGATION → RESOLVED</strong>. URL: <strong>/conservation/permits/update/{id}</strong>, <strong>/conservation/incidents/update/{id}</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-d">DELETE</span>
+      <div class="crud-content">
+        <div class="crud-action">Permit / Incident / Sighting Delete</div>
+        <div class="crud-desc">කල්ඉකුත් / වැරදි permit records, incident reports, wildlife sightings ඉවත් කිරීම. URL: <strong>/conservation/permits/delete/{id}</strong>, <strong>/conservation/incidents/delete/{id}</strong></div>
+      </div>
+    </div>
+  </div>
+  <div class="db-section">
+    <div class="db-title">DB Tables</div>
+    <div class="db-tables">
+      <span class="db-table">park_permits</span>
+      <span class="db-table">wildlife_sightings</span>
+      <span class="db-table">incident_reports</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODULE 5 ══════════════════════ -->
+<div class="module-card theme-5">
+  <div class="module-header">
+    <div class="module-icon">🎒</div>
+    <div class="module-meta">
+      <div class="module-name">Inventory Management</div>
+      <div class="module-si">උපකරණ Inventory කළමනාකරණය</div>
+      <div class="module-person">👤 Dimalsha K.G.T · IT25101218 · Logistics Staff</div>
+    </div>
+    <span class="module-badge">Module 5</span>
+  </div>
+  <div class="crud-list">
+    <div class="crud-item">
+      <span class="crud-tag tag-c">CREATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Equipment Stock Add / Trip ට Issue</div>
+        <div class="crud-desc">නව equipment items add (Binoculars, Tents, GPS, First Aid kits). Rental requests approve කර trip ට issue. URL: <strong>/inventory/add</strong>, <strong>/inventory/issue/{id}</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-r">READ</span>
+      <div class="crud-content">
+        <div class="crud-action">Inventory Dashboard (Stock / Issued / Low-Stock)</div>
+        <div class="crud-desc">Stock levels, trips ට issue කළ items, pending rental requests, low-stock warnings. URL: <strong>/inventory/dashboard</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-u">UPDATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Stock Adjust / Status Toggle / Returned Mark</div>
+        <div class="crud-desc">Stock quantity (+/-). Status: <strong>Available ↔ Unavailable</strong>. Trip ඉවරවූ පසු equipment <strong>RETURNED</strong> mark. URL: <strong>/inventory/update/{id}</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-d">DELETE</span>
+      <div class="crud-content">
+        <div class="crud-action">Equipment Item Delete</div>
+        <div class="crud-desc">Damaged, broken, decommissioned equipment inventory එකෙන් ඉවත් කිරීම. URL: <strong>/inventory/delete/{id}</strong></div>
+      </div>
+    </div>
+  </div>
+  <div class="db-section">
+    <div class="db-title">DB Tables</div>
+    <div class="db-tables">
+      <span class="db-table">equipment</span>
+      <span class="db-table">equipment_allocations</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODULE 6 ══════════════════════ -->
+<div class="module-card theme-6">
+  <div class="module-header">
+    <div class="module-icon">💳</div>
+    <div class="module-meta">
+      <div class="module-name">Finance Management</div>
+      <div class="module-si">Payment සහ Invoice කළමනාකරණය</div>
+      <div class="module-person">👤 Patabendi M.K.K · IT25101973 · Finance Officer</div>
+    </div>
+    <span class="module-badge">Module 6</span>
+  </div>
+  <div class="crud-list">
+    <div class="crud-item">
+      <span class="crud-tag tag-c">CREATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Payment Process / Invoice Generate</div>
+        <div class="crud-desc">Card හෝ Bank Transfer (slip upload) ගෙවීම. Approval වූ විට 10% VAT Tax Invoice auto-generate (Factory Pattern). URL: <strong>/finance/pay</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-r">READ</span>
+      <div class="crud-content">
+        <div class="crud-action">Finance Dashboard / Invoice / Revenue Report</div>
+        <div class="crud-desc">Total revenue, pending bank transfers, payment transactions list, tax invoices list. URL: <strong>/finance/dashboard</strong>, <strong>/finance/invoices</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-u">UPDATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Bank Transfer Approve/Reject / Refund / Invoice Void</div>
+        <div class="crud-desc">Bank slip verify → <strong>PAID / REJECTED</strong>. Cancel booking refund. Invoice → <strong>VOID</strong>. URL: <strong>/finance/payments/approve/{id}</strong>, <strong>/finance/invoices/void/{id}</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-d">DELETE</span>
+      <div class="crud-content">
+        <div class="crud-action">Tax Invoice Delete / Payment Transaction Delete</div>
+        <div class="crud-desc">වැරදි invoices permanent delete. Payment delete කළ විට linked invoices ද auto-delete (DB integrity). URL: <strong>/finance/invoices/delete/{id}</strong>, <strong>/finance/payments/delete/{id}</strong></div>
+      </div>
+    </div>
+  </div>
+  <div class="db-section">
+    <div class="db-title">DB Tables</div>
+    <div class="db-tables">
+      <span class="db-table">payments</span>
+      <span class="db-table">invoices</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ SYSTEM CORE ══════════════════════ -->
+<div class="module-card theme-1" style="border-color: #a8c496;">
+  <div class="module-header">
+    <div class="module-icon">🔐</div>
+    <div class="module-meta">
+      <div class="module-name">User Management / Admin</div>
+      <div class="module-si">User Account සහ System Admin</div>
+      <div class="module-person">👤 System Core · Admin Role · All Members</div>
+    </div>
+    <span class="module-badge">Core</span>
+  </div>
+  <div class="crud-list">
+    <div class="crud-item">
+      <span class="crud-tag tag-c">CREATE</span>
+      <div class="crud-content">
+        <div class="crud-action">Staff Account Create / Customer Register</div>
+        <div class="crud-desc">Admin staff accounts create (Operator, Ranger, Finance, Logistics). Customer self-register. URL: <strong>/admin/users/add</strong>, <strong>/register</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-r">READ</span>
+      <div class="crud-content">
+        <div class="crud-action">Admin Dashboard / Users / Activity Logs / DB Viewer</div>
+        <div class="crud-desc">KPI overview, user accounts list, audit trail (Observer Pattern logs), raw database viewer. URL: <strong>/admin/dashboard</strong>, <strong>/admin/users</strong>, <strong>/admin/logs</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-u">UPDATE</span>
+      <div class="crud-content">
+        <div class="crud-action">User Role / Contact / Password / Profile Avatar Edit</div>
+        <div class="crud-desc">Admin ට ඕනෙ user ගේ role, name, contact edit. User ට තමන්ගේ profile, avatar update. URL: <strong>/admin/users/edit/{id}</strong>, <strong>/profile/update</strong></div>
+      </div>
+    </div>
+    <div class="crud-item">
+      <span class="crud-tag tag-d">DELETE</span>
+      <div class="crud-content">
+        <div class="crud-action">Staff Account Delete</div>
+        <div class="crud-desc">Admin ට ගිය staff ගේ accounts permanently remove. URL: <strong>/admin/users/delete/{id}</strong></div>
+      </div>
+    </div>
+  </div>
+  <div class="db-section">
+    <div class="db-title">DB Tables</div>
+    <div class="db-tables">
+      <span class="db-table">users</span>
+      <span class="db-table">activity_logs</span>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <strong>🌿 Wild Safari Trip Management System</strong><br>
+  SE2030 · Group 03 · Java 17 + Spring Boot 3 + MySQL + Thymeleaf
+</div>
+
+</body>
+</html>
