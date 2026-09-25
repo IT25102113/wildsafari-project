@@ -42,6 +42,10 @@ public class BookingService {
         return bookingRepository.findByCustomerEmailOrderByCreatedAtDesc(email);
     }
 
+    public List<Booking> getCustomerBookingsById(Long customerId) {
+        return bookingRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
+    }
+
     public Optional<Booking> findById(Long id) {
         return bookingRepository.findById(id);
     }

@@ -108,6 +108,8 @@ public class BookingController {
         }
 
         booking.setCustomerId(user.getId());
+        booking.setCustomerEmail(user.getEmail());
+        booking.setCustomerName(user.getFullName());
         String actorEmail = user.getEmail();
 
         try {
@@ -162,7 +164,14 @@ public class BookingController {
             return "redirect:/login?redirect=/bookings/my-bookings";
         }
 
-        List<Booking> bookings = bookingService.getCustomerBookings(user.getEmail());
+        // Query by userId (always set on booking create) — email can be null in some DB rows
+        List<Booking> bookings = bookingService.getCustomerBookingsById(user.getId());
+        // Fallback: also include bookings matched by email (union)
+        List<Booking> byEmail = bookingService.getCustomerBookings(user.getEmail());
+        byEmail.stream()
+               .filter(b -> bookings.stream().noneMatch(eb -> eb.getId().equals(b.getId())))
+               .forEach(bookings::add);
+        bookings.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
         model.addAttribute("bookings", bookings);
         model.addAttribute("currentUser", user);
         model.addAttribute("currentRole", user.getRole());
