@@ -17,6 +17,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import com.safari.patterns.strategy.PaymentStrategy;
+import com.safari.patterns.strategy.PaymentDetails;
 
 @Service
 public class FinanceService {
@@ -25,6 +27,7 @@ public class FinanceService {
     private final InvoiceRepository invoiceRepository;
     private final BookingRepository bookingRepository;
     private final ActivityLogService activityLogService;
+    private final Map<String, PaymentStrategy> paymentStrategies;
 
     @Value("${safari.upload.dir:uploads}")
     private String uploadDir;
@@ -32,11 +35,13 @@ public class FinanceService {
     public FinanceService(PaymentRepository paymentRepository,
                           InvoiceRepository invoiceRepository,
                           BookingRepository bookingRepository,
-                          ActivityLogService activityLogService) {
+                          ActivityLogService activityLogService,
+                          Map<String, PaymentStrategy> paymentStrategies) {
         this.paymentRepository = paymentRepository;
         this.invoiceRepository = invoiceRepository;
         this.bookingRepository = bookingRepository;
         this.activityLogService = activityLogService;
+        this.paymentStrategies = paymentStrategies;
     }
 
     public List<Payment> getAllPayments() {
@@ -60,21 +65,12 @@ public class FinanceService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
 
-        // Validate mock card
-        if (cardNumber == null || cardNumber.replaceAll("\\s+", "").length() < 13) {
-            throw new IllegalArgumentException("Invalid Credit/Debit card number format.");
-        }
+        PaymentDetails details = new PaymentDetails();
+        details.setCardNumber(cardNumber);
+        details.setExpiryDate(expiryDate);
+        details.setCvv(cvv);
 
-        Payment payment = new Payment();
-        payment.setBooking(booking);
-        payment.setAmount(booking.getTotalPrice());
-        payment.setPaymentMethod("CARD_SANDBOX");
-        payment.setPaymentStatus("PAID");
-        payment.setTransactionDate(LocalDateTime.now());
-        payment.setPaymentReference("PAY-" + LocalDate.now().getYear() + "-" + ThreadLocalRandom.current().nextInt(10000, 99999));
-        payment.setRemarks("Authorized via Sandbox Gateway (Card ending in " +
-                cardNumber.substring(Math.max(0, cardNumber.length() - 4)) + ")");
-
+        Payment payment = paymentStrategies.get("cardPaymentStrategy").executePayment(booking, details);
         Payment savedPayment = paymentRepository.save(payment);
 
         // Update booking state
@@ -104,27 +100,11 @@ public class FinanceService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
 
-        Payment payment = new Payment();
-        payment.setBooking(booking);
-        payment.setAmount(booking.getTotalPrice());
-        payment.setPaymentMethod("BANK_TRANSFER");
-        payment.setPaymentStatus("PENDING"); // Pending finance approval
-        payment.setTransactionDate(LocalDateTime.now());
-        payment.setPaymentReference("PAY-BT-" + LocalDate.now().getYear() + "-" + ThreadLocalRandom.current().nextInt(1000, 9999));
-        payment.setRemarks("Bank Transfer Slip Reference: " + bankRef);
+        PaymentDetails details = new PaymentDetails();
+        details.setSlipFile(slipFile);
+        details.setBankRef(bankRef);
 
-        if (slipFile != null && !slipFile.isEmpty()) {
-            try {
-                Path root = Paths.get(uploadDir);
-                if (!Files.exists(root)) Files.createDirectories(root);
-                String fileName = "slip_" + UUID.randomUUID().toString().substring(0, 8) + ".jpg";
-                Files.copy(slipFile.getInputStream(), root.resolve(fileName), StandardCopyOption.REPLACE_EXISTING);
-                payment.setBankSlipImage("/uploads/" + fileName);
-            } catch (IOException e) {
-                System.err.println("Failed to save bank slip: " + e.getMessage());
-            }
-        }
-
+        Payment payment = paymentStrategies.get("bankTransferPaymentStrategy").executePayment(booking, details);
         Payment saved = paymentRepository.save(payment);
 
         // Update booking payment status to PENDING until approved by finance
