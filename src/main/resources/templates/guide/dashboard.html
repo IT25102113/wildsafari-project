@@ -329,6 +329,9 @@
                     <span class="guide-rate-label">Daily Tour Allowance</span>
                     <span class="guide-rate-val">LKR <span th:text="${#numbers.formatDecimal(guide.dailyRate, 0, 'COMMA', 2, 'POINT')}">5,500.00</span></span>
                 </div>
+                <button type="button" class="btn btn-sm rounded-pill px-3 py-1 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#editGuideProfileModal" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #FFFFFF; font-size: 0.78rem;">
+                    <i class="bi bi-person-gear me-1"></i>Edit Profile &amp; Password
+                </button>
                 <a href="#notificationsSection" th:if="${unreadCount > 0}" class="guide-alert-pill">
                     <i class="bi bi-bell-fill text-danger"></i>
                     <span th:text="${unreadCount}">1</span> New Assignment Alert(s)
@@ -531,6 +534,9 @@
             <div class="guide-section-card">
                 <div class="guide-section-header">
                     <span><i class="bi bi-person-badge text-success me-2"></i>Guide Credentials</span>
+                    <button type="button" class="btn btn-sm btn-outline-success py-1 px-3" style="font-size: 0.75rem; border-radius: 999px;" data-bs-toggle="modal" data-bs-target="#editGuideProfileModal">
+                        <i class="bi bi-pencil-square me-1"></i>Edit
+                    </button>
                 </div>
                 <div class="p-4" style="font-size: 0.85rem;">
                     <div class="d-flex justify-content-between py-2 border-bottom">
@@ -563,6 +569,98 @@
         </div>
     </div>
 </div>
+
+<!-- Modal: Guide Self Profile & Password Update -->
+<div class="modal fade text-start" id="editGuideProfileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom px-4 py-3" style="background: #FAF9F6;">
+                <h5 class="modal-title fw-bold" style="font-family: 'Outfit', sans-serif;">
+                    <i class="bi bi-person-gear text-success me-2"></i>Update My Guide Profile
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{/guide-portal/profile/update}" method="post">
+                <div class="modal-body px-4 py-3">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase" style="font-size: 0.72rem;">Full Name</label>
+                            <input type="text" class="form-control safari-input bg-light" th:value="${guide.fullName}" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase" style="font-size: 0.72rem;">DWC License</label>
+                            <input type="text" class="form-control safari-input bg-light" th:value="${guide.licenseNumber}" readonly>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase" style="font-size: 0.72rem;">Email Address</label>
+                            <input type="email" class="form-control safari-input bg-light" th:value="${guide.email}" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase" style="font-size: 0.72rem;">Contact Mobile (10 Digits)</label>
+                            <input type="tel" name="contactNumber" class="form-control safari-input" th:value="${guide.contactNumber}" maxlength="10" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase" style="font-size: 0.72rem;">Languages Spoken</label>
+                        <input type="text" name="languages" class="form-control safari-input" th:value="${guide.languages}" placeholder="e.g. English, Sinhala, German, French" required>
+                    </div>
+
+                    <hr class="my-3 text-muted">
+
+                    <div class="mb-2">
+                        <h6 class="fw-bold text-dark mb-1" style="font-size: 0.88rem;">
+                            <i class="bi bi-shield-lock text-warning me-1"></i>Change Security Password
+                        </h6>
+                        <p class="small text-muted mb-3" style="font-size: 0.76rem;">Leave blank if you do not wish to change your current login password.</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase" style="font-size: 0.72rem;">New Password</label>
+                        <div class="input-group">
+                            <input type="password" name="newPassword" id="guideSelfNewPwd" class="form-control safari-input" placeholder="Min. 6 characters" minlength="6">
+                            <button class="btn btn-outline-secondary" type="button" onclick="toggleGuideSelfPwd('guideSelfNewPwd', this)">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase" style="font-size: 0.72rem;">Confirm New Password</label>
+                        <div class="input-group">
+                            <input type="password" name="confirmPassword" id="guideSelfConfirmPwd" class="form-control safari-input" placeholder="Re-type new password" minlength="6">
+                            <button class="btn btn-outline-secondary" type="button" onclick="toggleGuideSelfPwd('guideSelfConfirmPwd', this)">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top px-4 py-3">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-success px-4 fw-bold" style="border-radius: 10px;">
+                        <i class="bi bi-check2-circle me-1"></i>Save Profile Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleGuideSelfPwd(inputId, btn) {
+    const inp = document.getElementById(inputId);
+    if (!inp) return;
+    const isPwd = inp.type === 'password';
+    inp.type = isPwd ? 'text' : 'password';
+    const icon = btn.querySelector('i');
+    if (icon) {
+        icon.className = isPwd ? 'bi bi-eye-slash' : 'bi bi-eye';
+    }
+}
+</script>
 
 <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
 </body>

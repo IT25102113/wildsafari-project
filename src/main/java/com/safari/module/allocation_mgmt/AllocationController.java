@@ -158,6 +158,7 @@ public class AllocationController {
     @PostMapping("/guides/save")
     public String saveGuide(@Valid @ModelAttribute("newGuide") Guide guide,
                             BindingResult bindingResult,
+                            @RequestParam(value = "password", required = false) String password,
                             HttpSession session,
                             RedirectAttributes redirectAttributes,
                             Model model) {
@@ -168,14 +169,19 @@ public class AllocationController {
             bindingResult.rejectValue("contactNumber", "error.newGuide", "Contact number must be exactly 10 digits");
         }
 
+        if (password != null && !password.isBlank() && password.trim().length() < 6) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Login password must be at least 6 characters long.");
+            return "redirect:/allocation/guides";
+        }
+
         if (bindingResult.hasErrors()) {
             redirectAttributes.addFlashAttribute("errorMessage", "Validation failed: Please ensure all fields are correct, including a 10-digit phone number.");
             return "redirect:/allocation/guides";
         }
 
         try {
-            allocationService.saveGuide(guide, actorEmail);
-            redirectAttributes.addFlashAttribute("successMessage", "Guide record saved successfully!");
+            allocationService.saveGuide(guide, password, actorEmail);
+            redirectAttributes.addFlashAttribute("successMessage", "Certified Guide registered & portal login account created successfully!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
@@ -187,6 +193,7 @@ public class AllocationController {
     public String updateGuide(@PathVariable("id") Long id,
                               @Valid @ModelAttribute("guide") Guide guide,
                               BindingResult bindingResult,
+                              @RequestParam(value = "password", required = false) String password,
                               HttpSession session,
                               RedirectAttributes redirectAttributes) {
         User user = UserSession.getLoggedInUser(session);
@@ -197,9 +204,14 @@ public class AllocationController {
             return "redirect:/allocation/guides";
         }
 
+        if (password != null && !password.isBlank() && password.trim().length() < 6) {
+            redirectAttributes.addFlashAttribute("errorMessage", "New password must be at least 6 characters long.");
+            return "redirect:/allocation/guides";
+        }
+
         try {
-            allocationService.updateGuide(id, guide, actorEmail);
-            redirectAttributes.addFlashAttribute("successMessage", "Guide profile updated successfully!");
+            allocationService.updateGuide(id, guide, password, actorEmail);
+            redirectAttributes.addFlashAttribute("successMessage", "Guide profile & portal credentials updated successfully!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }

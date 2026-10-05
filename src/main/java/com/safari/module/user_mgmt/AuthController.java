@@ -194,6 +194,8 @@ public class AuthController {
                 return "redirect:/inventory/dashboard";
             case "FINANCE_OFFICER":
                 return "redirect:/finance/dashboard";
+            case "GUIDE":
+                return "redirect:/guide-portal/dashboard";
             case "CUSTOMER":
             default:
                 return "redirect:/";

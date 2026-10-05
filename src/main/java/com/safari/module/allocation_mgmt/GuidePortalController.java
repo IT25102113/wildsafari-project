@@ -112,4 +112,57 @@ public class GuidePortalController {
         if (user != null) notificationService.markAllRead(user.getEmail());
         return "redirect:/guide-portal/dashboard";
     }
+
+    // ─── Guide Self Profile & Password Update ─────────────────────────
+    @PostMapping("/profile/update")
+    public String updateSelfProfile(@RequestParam("contactNumber") String contactNumber,
+                                    @RequestParam("languages") String languages,
+                                    @RequestParam(value = "newPassword", required = false) String newPassword,
+                                    @RequestParam(value = "confirmPassword", required = false) String confirmPassword,
+                                    HttpSession session,
+                                    RedirectAttributes ra) {
+        User user = UserSession.getLoggedInUser(session);
+        if (user == null || !"GUIDE".equalsIgnoreCase(user.getRole())) {
+            ra.addFlashAttribute("errorMessage", "Access restricted to registered guides.");
+            return "redirect:/login";
+        }
+
+        if (contactNumber == null || !contactNumber.matches("^0[0-9]{9}$|^[0-9]{10}$")) {
+            ra.addFlashAttribute("errorMessage", "Validation failed: Contact mobile number must be exactly 10 digits.");
+            return "redirect:/guide-portal/dashboard";
+        }
+
+        if (languages == null || languages.trim().isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Languages spoken cannot be empty.");
+            return "redirect:/guide-portal/dashboard";
+        }
+
+        if (newPassword != null && !newPassword.isBlank()) {
+            if (newPassword.trim().length() < 6) {
+                ra.addFlashAttribute("errorMessage", "New password must be at least 6 characters long.");
+                return "redirect:/guide-portal/dashboard";
+            }
+            if (!newPassword.equals(confirmPassword)) {
+                ra.addFlashAttribute("errorMessage", "New password confirmation does not match.");
+                return "redirect:/guide-portal/dashboard";
+            }
+        }
+
+        try {
+            allocationService.updateGuideSelfProfile(user.getEmail(), contactNumber.trim(), languages.trim(), newPassword);
+
+            // Update user in current session
+            user.setPhone(contactNumber.trim());
+            if (newPassword != null && !newPassword.isBlank()) {
+                user.setPassword(newPassword.trim());
+            }
+            UserSession.setLoggedInUser(session, user);
+
+            ra.addFlashAttribute("successMessage", "Your guide profile and security credentials have been updated successfully!");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
+        }
+
+        return "redirect:/guide-portal/dashboard";
+    }
 }

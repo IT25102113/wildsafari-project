@@ -4,6 +4,8 @@ import com.safari.common.ActivityLogService;
 import com.safari.common.NotificationService;
 import com.safari.module.booking_mgmt.Booking;
 import com.safari.module.booking_mgmt.BookingRepository;
+import com.safari.module.user_mgmt.User;
+import com.safari.module.user_mgmt.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ public class AllocationService {
     private final ActivityLogService activityLogService;
     private final NotificationService notificationService;
     private final GuideAvailabilityRepository availabilityRepository;
+    private final UserRepository userRepository;
 
     public AllocationService(GuideRepository guideRepository,
                              VehicleRepository vehicleRepository,
@@ -28,7 +31,8 @@ public class AllocationService {
                              BookingRepository bookingRepository,
                              ActivityLogService activityLogService,
                              NotificationService notificationService,
-                             GuideAvailabilityRepository availabilityRepository) {
+                             GuideAvailabilityRepository availabilityRepository,
+                             UserRepository userRepository) {
         this.guideRepository = guideRepository;
         this.vehicleRepository = vehicleRepository;
         this.allocationRepository = allocationRepository;
@@ -36,6 +40,7 @@ public class AllocationService {
         this.activityLogService = activityLogService;
         this.notificationService = notificationService;
         this.availabilityRepository = availabilityRepository;
+        this.userRepository = userRepository;
     }
 
     // Guide operations
@@ -44,17 +49,46 @@ public class AllocationService {
     public Optional<Guide> findGuideById(Long id) { return guideRepository.findById(id); }
 
     @Transactional
-    public Guide saveGuide(Guide guide, String actorEmail) {
+    public Guide saveGuide(Guide guide, String password, String actorEmail) {
         boolean isNew = (guide.getId() == null);
         Guide saved = guideRepository.save(guide);
+
+        // Synchronize or create login User account for the guide
+        Optional<User> userOpt = userRepository.findByEmail(saved.getEmail());
+        if (userOpt.isPresent()) {
+            User u = userOpt.get();
+            u.setFullName(saved.getFullName());
+            u.setPhone(saved.getContactNumber());
+            u.setRole("GUIDE");
+            if (password != null && !password.isBlank()) {
+                u.setPassword(password.trim());
+            }
+            userRepository.save(u);
+        } else {
+            String initialPassword = (password != null && !password.isBlank()) ? password.trim() : "guide123";
+            User newUser = new User(
+                    saved.getFullName(),
+                    saved.getEmail(),
+                    initialPassword,
+                    saved.getContactNumber(),
+                    "GUIDE"
+            );
+            userRepository.save(newUser);
+        }
+
         activityLogService.publishActivity(
                 actorEmail,
                 "OPERATIONS_MANAGER",
                 "Guide & Vehicle Allocation",
                 isNew ? "CREATE_GUIDE" : "UPDATE_GUIDE",
-                "Guide record saved: " + saved.getFullName() + " (License: " + saved.getLicenseNumber() + ")"
+                "Guide record & portal login account saved: " + saved.getFullName() + " (Email: " + saved.getEmail() + ")"
         );
         return saved;
+    }
+
+    @Transactional
+    public Guide saveGuide(Guide guide, String actorEmail) {
+        return saveGuide(guide, null, actorEmail);
     }
 
     // Vehicle operations
@@ -300,9 +334,11 @@ public class AllocationService {
 
     // ─── Guide Management CRUD ───────────────────────────────────────────
     @Transactional
-    public Guide updateGuide(Long guideId, Guide updated, String actorEmail) {
+    public Guide updateGuide(Long guideId, Guide updated, String newPassword, String actorEmail) {
         Guide guide = guideRepository.findById(guideId)
                 .orElseThrow(() -> new IllegalArgumentException("Guide not found with id: " + guideId));
+
+        String oldEmail = guide.getEmail();
         guide.setFullName(updated.getFullName());
         guide.setLicenseNumber(updated.getLicenseNumber());
         guide.setContactNumber(updated.getContactNumber());
@@ -313,12 +349,68 @@ public class AllocationService {
         guide.setStatus(updated.getStatus());
         Guide saved = guideRepository.save(guide);
 
+        // Synchronize User login account
+        Optional<User> userOpt = userRepository.findByEmail(oldEmail);
+        if (userOpt.isPresent()) {
+            User u = userOpt.get();
+            u.setFullName(saved.getFullName());
+            u.setEmail(saved.getEmail());
+            u.setPhone(saved.getContactNumber());
+            u.setRole("GUIDE");
+            if (newPassword != null && !newPassword.isBlank()) {
+                u.setPassword(newPassword.trim());
+            }
+            userRepository.save(u);
+        } else {
+            String pwd = (newPassword != null && !newPassword.isBlank()) ? newPassword.trim() : "guide123";
+            userRepository.save(new User(
+                    saved.getFullName(),
+                    saved.getEmail(),
+                    pwd,
+                    saved.getContactNumber(),
+                    "GUIDE"
+            ));
+        }
+
         activityLogService.publishActivity(
                 actorEmail,
                 "OPERATIONS_MANAGER",
                 "Guide & Vehicle Allocation",
                 "UPDATE_GUIDE",
-                "Updated guide profile: " + saved.getFullName() + " (License: " + saved.getLicenseNumber() + ")"
+                "Updated guide profile & portal credentials: " + saved.getFullName() + " (License: " + saved.getLicenseNumber() + ")"
+        );
+        return saved;
+    }
+
+    @Transactional
+    public Guide updateGuide(Long guideId, Guide updated, String actorEmail) {
+        return updateGuide(guideId, updated, null, actorEmail);
+    }
+
+    @Transactional
+    public Guide updateGuideSelfProfile(String email, String contactNumber, String languages, String newPassword) {
+        Guide guide = guideRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Guide record not found for email: " + email));
+
+        guide.setContactNumber(contactNumber);
+        guide.setLanguages(languages);
+        Guide saved = guideRepository.save(guide);
+
+        // Update user login record
+        userRepository.findByEmail(email).ifPresent(user -> {
+            user.setPhone(contactNumber);
+            if (newPassword != null && !newPassword.isBlank()) {
+                user.setPassword(newPassword.trim());
+            }
+            userRepository.save(user);
+        });
+
+        activityLogService.publishActivity(
+                email,
+                "GUIDE",
+                "Guide Self Service",
+                "PROFILE_UPDATED",
+                "Guide " + saved.getFullName() + " updated personal contact info and security credentials."
         );
         return saved;
     }
@@ -337,6 +429,13 @@ public class AllocationService {
         if (guide.getEmail() != null) {
             List<GuideAvailability> unavail = availabilityRepository.findByGuideEmail(guide.getEmail());
             availabilityRepository.deleteAll(unavail);
+
+            // Also remove login User account if role is GUIDE
+            userRepository.findByEmail(guide.getEmail()).ifPresent(u -> {
+                if ("GUIDE".equalsIgnoreCase(u.getRole())) {
+                    userRepository.delete(u);
+                }
+            });
         }
 
         guideRepository.delete(guide);
@@ -346,7 +445,7 @@ public class AllocationService {
                 "OPERATIONS_MANAGER",
                 "Guide & Vehicle Allocation",
                 "DELETE_GUIDE",
-                "Deleted guide record: " + guide.getFullName() + " (License: " + guide.getLicenseNumber() + ")"
+                "Deleted guide record and login credentials: " + guide.getFullName() + " (License: " + guide.getLicenseNumber() + ")"
         );
     }
 

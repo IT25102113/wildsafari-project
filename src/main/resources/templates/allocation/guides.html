@@ -122,6 +122,16 @@
                             </div>
                         </div>
                         <div class="mb-3">
+                            <label class="form-label small fw-bold">Reset Portal Password (Optional)</label>
+                            <div class="input-group">
+                                <input type="password" name="password" th:id="'editPwd-' + ${g.id}" class="form-control safari-input" placeholder="Leave blank to keep current password" minlength="6">
+                                <button class="btn btn-outline-secondary" type="button" th:onclick="'togglePwdVisibility(\'editPwd-' + ${g.id} + '\', this)'">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text small text-muted">Enter a new password only if the naturalist requested a password reset.</div>
+                        </div>
+                        <div class="mb-3">
                             <label class="form-label small fw-bold">Status</label>
                             <select name="status" class="form-select safari-input">
                                 <option value="ACTIVE" th:selected="${g.status == 'ACTIVE'}">ACTIVE (Available for duty)</option>
@@ -174,6 +184,16 @@
                         </div>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label small fw-bold">Initial Portal Password <i class="bi bi-shield-lock text-muted ms-1" title="Login password for the guide's portal account"></i></label>
+                        <div class="input-group">
+                            <input type="password" name="password" id="newGuidePassword" class="form-control safari-input" placeholder="e.g. guide123" minlength="6" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePwdVisibility('newGuidePassword', this)">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text small text-muted">A system login account (Role: GUIDE) will be created with this email and password.</div>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label small fw-bold">Languages Spoken <i class="bi bi-info-circle text-muted ms-1" title="e.g. English, Sinhala, German, French"></i></label>
                         <input type="text" th:field="*{languages}" class="form-control safari-input"
  required>
@@ -197,6 +217,19 @@
         </div>
     </div>
 </div>
+
+<script>
+function togglePwdVisibility(inputId, btn) {
+    const inp = document.getElementById(inputId);
+    if (!inp) return;
+    const isPwd = inp.type === 'password';
+    inp.type = isPwd ? 'text' : 'password';
+    const icon = btn.querySelector('i');
+    if (icon) {
+        icon.className = isPwd ? 'bi bi-eye-slash' : 'bi bi-eye';
+    }
+}
+</script>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
 <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
