@@ -127,6 +127,10 @@ public class FinanceService {
 
         Payment saved = paymentRepository.save(payment);
 
+        // Update booking payment status to PENDING until approved by finance
+        booking.setPaymentStatus("PENDING");
+        bookingRepository.save(booking);
+
         activityLogService.publishActivity(
                 actorEmail,
                 "FINANCE_OFFICER",
@@ -152,6 +156,7 @@ public class FinanceService {
             } else {
                 payment.setPaymentStatus("FAILED");
                 payment.setRemarks(payment.getRemarks() + " [Rejected by Finance]");
+                booking.setPaymentStatus("UNPAID");
             }
             paymentRepository.save(payment);
             bookingRepository.save(booking);

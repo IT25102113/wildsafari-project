@@ -52,21 +52,124 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 3. Dynamic Safari Price Calculator on Booking Form
+    // 3. Dynamic Safari Price Calculator & Strict Validation on Booking Form
     const participantInput = document.getElementById('bookingParticipants');
     const tripDateInput = document.getElementById('bookingTripDate');
     const totalPriceDisplay = document.getElementById('calculatedTotalPrice');
     const basePriceEl = document.getElementById('pkgBasePrice');
     const multiplierEl = document.getElementById('pkgMultiplier');
+    const safariBookingForm = document.getElementById('safariBookingForm');
 
+    // Enforce min date attribute to today across all tripDate inputs
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+
+    document.querySelectorAll('input[type="date"][name*="tripDate"], input[type="date"][name*="Date"]').forEach(input => {
+        if (!input.getAttribute('min')) {
+            input.setAttribute('min', todayStr);
+        }
+    });
+
+    // Validate Trip Date instantly
+    const validateTripDate = (input) => {
+        if (!input) return true;
+        const val = input.value;
+        const errorEl = document.getElementById(input.id + '-error') || input.nextElementSibling;
+        if (!val) {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            if (errorEl && errorEl.classList.contains('validation-msg')) {
+                errorEl.textContent = 'Please choose a safari expedition date.';
+            }
+            return false;
+        }
+
+        const selectedDate = new Date(val + 'T00:00:00');
+        if (selectedDate < today) {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            if (errorEl && errorEl.classList.contains('validation-msg')) {
+                errorEl.textContent = '⚠️ Cannot book past dates! Please select today or a future expedition date.';
+            }
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+            if (errorEl && errorEl.classList.contains('validation-msg')) {
+                errorEl.textContent = '';
+            }
+            return true;
+        }
+    };
+
+    // Validate Participant Count instantly
+    const validateParticipants = (input) => {
+        if (!input) return true;
+        const max = parseInt(input.dataset.max || input.getAttribute('max') || '10', 10);
+        const errorEl = document.getElementById(input.id + '-error') || input.nextElementSibling;
+        const rawVal = input.value.trim();
+        const val = parseInt(rawVal, 10);
+
+        if (rawVal === '' || isNaN(val) || val < 1) {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            if (errorEl && errorEl.classList.contains('validation-msg')) {
+                errorEl.textContent = '⚠️ Passenger count cannot be 0 or negative. Minimum 1 passenger required.';
+            }
+            return false;
+        } else if (val > max) {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            if (errorEl && errorEl.classList.contains('validation-msg')) {
+                errorEl.textContent = `⚠️ Exceeds max group limit of ${max} passengers for this package.`;
+            }
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+            if (errorEl && errorEl.classList.contains('validation-msg')) {
+                errorEl.textContent = '';
+            }
+            return true;
+        }
+    };
+
+    // Prevent typing negative signs on number inputs
+    document.querySelectorAll('input[type="number"]').forEach(numInput => {
+        numInput.addEventListener('keydown', (e) => {
+            if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
+                e.preventDefault();
+            }
+        });
+    });
+
+    if (tripDateInput) {
+        tripDateInput.addEventListener('change', () => validateTripDate(tripDateInput));
+        tripDateInput.addEventListener('input', () => validateTripDate(tripDateInput));
+    }
+
+    if (participantInput) {
+        participantInput.addEventListener('input', () => validateParticipants(participantInput));
+        participantInput.addEventListener('change', () => validateParticipants(participantInput));
+    }
+
+    // Dynamic Price Calculator
     if (participantInput && basePriceEl && totalPriceDisplay) {
         const calculatePrice = () => {
+            const isDateValid = validateTripDate(tripDateInput);
+            const isPaxValid = validateParticipants(participantInput);
+
             const basePrice = parseFloat(basePriceEl.value || basePriceEl.textContent) || 0;
-            const participants = parseInt(participantInput.value) || 1;
+            const participants = parseInt(participantInput.value, 10);
+            const safePax = (isNaN(participants) || participants < 1) ? 1 : participants;
             let multiplier = 1.0;
 
             if (tripDateInput && tripDateInput.value) {
-                const date = new Date(tripDateInput.value);
+                const date = new Date(tripDateInput.value + 'T00:00:00');
                 const month = date.getMonth() + 1; // 1-12
                 // July (7), August (8), Dec (12), Jan (1) are Peak Seasons
                 if (month === 7 || month === 8 || month === 12 || month === 1) {
@@ -79,13 +182,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            const total = basePrice * participants * multiplier;
+            const total = basePrice * safePax * multiplier;
             totalPriceDisplay.textContent = 'LKR ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         };
 
         participantInput.addEventListener('input', calculatePrice);
         if (tripDateInput) tripDateInput.addEventListener('change', calculatePrice);
         calculatePrice();
+    }
+
+    // Block Form Submission if Date is in Past or Participants Invalid
+    if (safariBookingForm) {
+        safariBookingForm.addEventListener('submit', (e) => {
+            const isDateOk = validateTripDate(tripDateInput);
+            const isPaxOk = validateParticipants(participantInput);
+
+            if (!isDateOk || !isPaxOk) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!isDateOk && tripDateInput) tripDateInput.focus();
+                else if (!isPaxOk && participantInput) participantInput.focus();
+            }
+        });
     }
 
     // 4. Mock Credit Card Input Auto-formatter

@@ -1,6 +1,7 @@
 package com.safari.module.allocation_mgmt;
 
 import com.safari.common.ActivityLogService;
+import com.safari.common.NotificationService;
 import com.safari.module.booking_mgmt.Booking;
 import com.safari.module.booking_mgmt.BookingRepository;
 import org.springframework.stereotype.Service;
@@ -18,17 +19,23 @@ public class AllocationService {
     private final TripAllocationRepository allocationRepository;
     private final BookingRepository bookingRepository;
     private final ActivityLogService activityLogService;
+    private final NotificationService notificationService;
+    private final GuideAvailabilityRepository availabilityRepository;
 
     public AllocationService(GuideRepository guideRepository,
                              VehicleRepository vehicleRepository,
                              TripAllocationRepository allocationRepository,
                              BookingRepository bookingRepository,
-                             ActivityLogService activityLogService) {
+                             ActivityLogService activityLogService,
+                             NotificationService notificationService,
+                             GuideAvailabilityRepository availabilityRepository) {
         this.guideRepository = guideRepository;
         this.vehicleRepository = vehicleRepository;
         this.allocationRepository = allocationRepository;
         this.bookingRepository = bookingRepository;
         this.activityLogService = activityLogService;
+        this.notificationService = notificationService;
+        this.availabilityRepository = availabilityRepository;
     }
 
     // Guide operations
@@ -161,6 +168,29 @@ public class AllocationService {
                         " and Vehicle " + vehicle.getRegistrationNumber()
         );
 
+        // Notify the guide
+        notificationService.send(
+                guide.getEmail(),
+                "New Safari Assignment 🌿",
+                "You have been assigned to Booking " + booking.getBookingReference() +
+                " on " + tripDate + ". Package: " + booking.getSafariPackage().getName() +
+                ". Participants: " + booking.getParticipantCount() + ". Vehicle: " + vehicle.getRegistrationNumber(),
+                "SUCCESS"
+        );
+
+        // Notify the tourist / customer
+        if (booking.getCustomerEmail() != null) {
+            notificationService.send(
+                    booking.getCustomerEmail(),
+                    "Safari Crew Assigned: Guide & Cruiser Confirmed 🚙🌿",
+                    "Your safari expedition (" + booking.getBookingReference() + ") on " + tripDate +
+                            " has been assigned dedicated naturalist guide " + guide.getFullName() +
+                            " (Contact: " + guide.getContactNumber() + ") and 4x4 Safari Cruiser " +
+                            vehicle.getRegistrationNumber() + " (" + vehicle.getVehicleModel() + ").",
+                    "CREW_ASSIGNED"
+            );
+        }
+
         return saved;
     }
 
@@ -201,6 +231,25 @@ public class AllocationService {
                         ": Guide " + newGuide.getFullName() + ", Vehicle " + newVehicle.getRegistrationNumber()
         );
 
+        // Notify guide & tourist of reassignment
+        notificationService.send(
+                newGuide.getEmail(),
+                "Updated Safari Assignment 🌿",
+                "You have been reassigned to Booking " + allocation.getBooking().getBookingReference() + " on " + date,
+                "INFO"
+        );
+
+        if (allocation.getBooking() != null && allocation.getBooking().getCustomerEmail() != null) {
+            notificationService.send(
+                    allocation.getBooking().getCustomerEmail(),
+                    "Safari Crew Update: Guide & Cruiser Reassigned 🚙",
+                    "Your safari crew for booking " + allocation.getBooking().getBookingReference() +
+                            " has been updated to Guide " + newGuide.getFullName() + " (Contact: " + newGuide.getContactNumber() +
+                            ") and Vehicle " + newVehicle.getRegistrationNumber() + " (" + newVehicle.getVehicleModel() + ").",
+                    "CREW_ASSIGNED"
+            );
+        }
+
         return saved;
     }
 
@@ -216,5 +265,133 @@ public class AllocationService {
             );
             allocationRepository.delete(alloc);
         });
+    }
+
+    // ─── Guide Availability Management ───────────────────────────────────
+    public List<GuideAvailability> getGuideAvailabilityByEmail(String email) {
+        return availabilityRepository.findByGuideEmail(email);
+    }
+
+    public List<GuideAvailability> getGuideAvailabilityById(Long guideId) {
+        return availabilityRepository.findByGuideIdOrderByUnavailableDateDesc(guideId);
+    }
+
+    @Transactional
+    public void markUnavailable(Long guideId, LocalDate date, String reason) {
+        Guide guide = guideRepository.findById(guideId)
+                .orElseThrow(() -> new IllegalArgumentException("Guide not found"));
+        // Skip if already marked
+        if (availabilityRepository.findByGuideIdAndDate(guideId, date).isPresent()) return;
+        availabilityRepository.save(new GuideAvailability(guide, date, reason));
+    }
+
+    @Transactional
+    public void removeUnavailableDate(Long availabilityId) {
+        availabilityRepository.deleteById(availabilityId);
+    }
+
+    public Optional<Guide> findGuideByEmail(String email) {
+        return guideRepository.findByEmail(email);
+    }
+
+    public List<TripAllocation> getAllocationsByGuideEmail(String email) {
+        return allocationRepository.findByGuideEmailOrderByAllocationDateDesc(email);
+    }
+
+    // ─── Guide Management CRUD ───────────────────────────────────────────
+    @Transactional
+    public Guide updateGuide(Long guideId, Guide updated, String actorEmail) {
+        Guide guide = guideRepository.findById(guideId)
+                .orElseThrow(() -> new IllegalArgumentException("Guide not found with id: " + guideId));
+        guide.setFullName(updated.getFullName());
+        guide.setLicenseNumber(updated.getLicenseNumber());
+        guide.setContactNumber(updated.getContactNumber());
+        guide.setEmail(updated.getEmail());
+        guide.setLanguages(updated.getLanguages());
+        guide.setExperienceYears(updated.getExperienceYears());
+        guide.setDailyRate(updated.getDailyRate());
+        guide.setStatus(updated.getStatus());
+        Guide saved = guideRepository.save(guide);
+
+        activityLogService.publishActivity(
+                actorEmail,
+                "OPERATIONS_MANAGER",
+                "Guide & Vehicle Allocation",
+                "UPDATE_GUIDE",
+                "Updated guide profile: " + saved.getFullName() + " (License: " + saved.getLicenseNumber() + ")"
+        );
+        return saved;
+    }
+
+    @Transactional
+    public void deleteGuide(Long guideId, String actorEmail) {
+        Guide guide = guideRepository.findById(guideId)
+                .orElseThrow(() -> new IllegalArgumentException("Guide not found with id: " + guideId));
+
+        long activeTrips = allocationRepository.countActiveAllocationsByGuideId(guideId);
+        if (activeTrips > 0) {
+            throw new IllegalStateException("Cannot delete Guide " + guide.getFullName() +
+                    ": Guide is currently assigned to " + activeTrips + " active/upcoming safari trips.");
+        }
+
+        if (guide.getEmail() != null) {
+            List<GuideAvailability> unavail = availabilityRepository.findByGuideEmail(guide.getEmail());
+            availabilityRepository.deleteAll(unavail);
+        }
+
+        guideRepository.delete(guide);
+
+        activityLogService.publishActivity(
+                actorEmail,
+                "OPERATIONS_MANAGER",
+                "Guide & Vehicle Allocation",
+                "DELETE_GUIDE",
+                "Deleted guide record: " + guide.getFullName() + " (License: " + guide.getLicenseNumber() + ")"
+        );
+    }
+
+    // ─── 4x4 Cruiser / Vehicle CRUD ──────────────────────────────────────
+    @Transactional
+    public Vehicle updateVehicle(Long vehicleId, Vehicle updated, String actorEmail) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new IllegalArgumentException("Vehicle not found with id: " + vehicleId));
+        vehicle.setRegistrationNumber(updated.getRegistrationNumber());
+        vehicle.setVehicleModel(updated.getVehicleModel());
+        vehicle.setCapacity(updated.getCapacity());
+        vehicle.setConditionStatus(updated.getConditionStatus());
+        vehicle.setStatus(updated.getStatus());
+        vehicle.setLastServiceDate(updated.getLastServiceDate());
+        Vehicle saved = vehicleRepository.save(vehicle);
+
+        activityLogService.publishActivity(
+                actorEmail,
+                "OPERATIONS_MANAGER",
+                "Guide & Vehicle Allocation",
+                "UPDATE_VEHICLE",
+                "Updated vehicle: " + saved.getRegistrationNumber() + " (" + saved.getVehicleModel() + ")"
+        );
+        return saved;
+    }
+
+    @Transactional
+    public void deleteVehicle(Long vehicleId, String actorEmail) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new IllegalArgumentException("Vehicle not found with id: " + vehicleId));
+
+        long activeTrips = allocationRepository.countActiveAllocationsByVehicleId(vehicleId);
+        if (activeTrips > 0) {
+            throw new IllegalStateException("Cannot delete 4x4 Cruiser " + vehicle.getRegistrationNumber() +
+                    ": Vehicle is currently assigned to " + activeTrips + " active/upcoming safari trips.");
+        }
+
+        vehicleRepository.delete(vehicle);
+
+        activityLogService.publishActivity(
+                actorEmail,
+                "OPERATIONS_MANAGER",
+                "Guide & Vehicle Allocation",
+                "DELETE_VEHICLE",
+                "Deleted cruiser record: " + vehicle.getRegistrationNumber() + " (" + vehicle.getVehicleModel() + ")"
+        );
     }
 }

@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Expedition Checkout & Payment — WildSafari</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/custom-safari.css}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" th:href="@{/css/bootstrap-icons.min.css}">
 </head>
 <body>
 
@@ -19,7 +19,7 @@
         <!-- Payment Options Column -->
         <div class="col-lg-7">
             <div class="safari-card p-4 p-md-5 shadow-sm">
-                <span class="badge badge-safari-olive mb-1">Module 6 &bull; Patabendi M.K.K (IT25101973)</span>
+                <span class="badge badge-safari-olive mb-1">Expedition Payment Portal</span>
                 <h3 class="fw-bold mb-3">Secure Expedition Checkout</h3>
 
                 <div th:if="${currentRole == 'CUSTOMER'}">
@@ -113,7 +113,14 @@
         <!-- Right Summary Column -->
         <div class="col-lg-5">
             <div class="safari-card p-4">
-                <h5 class="fw-bold mb-3">Order Summary</h5>
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="fw-bold mb-0">Order Summary</h5>
+                    <button type="button" class="btn btn-sm btn-safari-outline py-1 px-3 d-inline-flex align-items-center gap-1"
+                            data-bs-toggle="modal" data-bs-target="#editCheckoutModal" title="Change date or passenger count">
+                        <i class="bi bi-pencil-square"></i>
+                        <span>Edit</span>
+                    </button>
+                </div>
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <span class="text-muted small">Reservation Ref:</span>
                     <strong th:text="${booking.bookingReference}">WS-2026-10492</strong>
@@ -128,16 +135,23 @@
                 </div>
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <span class="text-muted small">Date:</span>
-                    <strong th:text="${booking.tripDate}">2026-09-25</strong>
+                    <span class="d-flex align-items-center gap-2">
+                        <strong th:text="${booking.tripDate}">2026-09-25</strong>
+                        <a href="javascript:void(0)" class="text-decoration-none small text-success" data-bs-toggle="modal" data-bs-target="#editCheckoutModal" title="Change Date"><i class="bi bi-pencil-fill" style="font-size: 0.75rem;"></i></a>
+                    </span>
                 </div>
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <span class="text-muted small">Participants:</span>
-                    <strong th:text="${booking.participantCount}">2</strong>
+                    <span class="d-flex align-items-center gap-2">
+                        <strong th:text="${booking.participantCount}">2</strong>
+                        <span class="small text-muted">passenger(s)</span>
+                        <a href="javascript:void(0)" class="text-decoration-none small text-success" data-bs-toggle="modal" data-bs-target="#editCheckoutModal" title="Change Passengers"><i class="bi bi-pencil-fill" style="font-size: 0.75rem;"></i></a>
+                    </span>
                 </div>
 
-                <div class="p-3 rounded-3 mb-3" style="background-color: var(--safari-cream);">
+                <div class="p-3 rounded-4 mb-3" style="background-color: var(--safari-cream); border: 1px solid rgba(142, 166, 107, 0.35);">
                     <div class="d-flex align-items-center justify-content-between">
-                        <span class="fw-bold">Total Payable:</span>
+                        <span class="fw-bold" style="color: var(--safari-dark);">Total Payable:</span>
                         <span class="h4 fw-bold mb-0" style="color: var(--safari-olive-dark);">
                             LKR <span th:text="${#numbers.formatDecimal(booking.totalPrice, 0, 'COMMA', 2, 'POINT')}">57,000.00</span>
                         </span>
@@ -152,8 +166,135 @@
     </div>
 </div>
 
+<!-- Edit Reservation Modal for Checkout -->
+<div class="modal fade" id="editCheckoutModal" tabindex="-1" aria-labelledby="editCheckoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom px-4 py-3">
+                <h5 class="modal-title fw-bold" id="editCheckoutModalLabel">
+                    <i class="bi bi-pencil-square text-success me-2"></i>Modify Reservation Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form th:action="@{'/bookings/update/' + ${booking.id}}" method="post" id="checkoutEditForm">
+                <input type="hidden" name="redirect" th:value="'/finance/checkout/' + ${booking.id}">
+                <input type="hidden" name="specialRequests" th:value="${booking.specialRequests}">
+                <div class="modal-body px-4 py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Safari Package</label>
+                        <input type="text" class="form-control bg-light" th:value="${booking.safariPackage.name}" readonly>
+                        <div class="form-text small">Max group capacity: <span th:text="${booking.safariPackage.maxGroupSize}">6</span> passengers.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Scheduled Trip Date <i class="bi bi-info-circle text-muted ms-1" title="Select today or future date"></i></label>
+                        <input type="date" name="tripDate" class="form-control safari-input" id="checkoutModalTripDate"
+                               th:value="${booking.tripDate}"
+                               th:min="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Passenger Count (1 – <span th:text="${booking.safariPackage.maxGroupSize}">6</span>)</label>
+                        <input type="number" name="participantCount" class="form-control safari-input" id="checkoutModalPax"
+                               th:value="${booking.participantCount}" min="1" th:max="${booking.safariPackage.maxGroupSize}" required>
+                        <div id="checkoutModalPax-error" class="small text-danger mt-1"></div>
+                    </div>
+
+                    <!-- Live Recalculate Preview inside Modal -->
+                    <div class="p-3 rounded-3" style="background-color: var(--safari-cream); border: 1px solid rgba(142, 166, 107, 0.3);">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Base Price per Passenger:</span>
+                            <span>LKR <span th:text="${#numbers.formatDecimal(booking.safariPackage.basePrice, 0, 'COMMA', 2, 'POINT')}">28,500.00</span></span>
+                        </div>
+                        <div class="d-flex justify-content-between fw-bold pt-2 border-top" style="border-color: rgba(142,166,107,0.2) !important;">
+                            <span style="color: var(--safari-dark);">Estimated New Total:</span>
+                            <span style="color: var(--safari-olive-dark);">
+                                LKR <span id="checkoutModalEstimatedTotal" th:text="${#numbers.formatDecimal(booking.totalPrice, 0, 'COMMA', 2, 'POINT')}">57,000.00</span>
+                            </span>
+                        </div>
+                        <div class="small text-muted mt-1" id="checkoutModalSeasonNote">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer px-4 py-3 border-top">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-safari-primary" id="checkoutModalSaveBtn">
+                        <i class="bi bi-check2-circle me-1"></i>Update &amp; Recalculate
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div th:replace="~{fragments/footer :: footer}"></div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
 <script th:src="@{/js/validation.js}"></script>
+<script th:inline="javascript">
+    document.addEventListener("DOMContentLoaded", function () {
+        const modalPax = document.getElementById('checkoutModalPax');
+        const modalDate = document.getElementById('checkoutModalTripDate');
+        const modalTotal = document.getElementById('checkoutModalEstimatedTotal');
+        const modalNote = document.getElementById('checkoutModalSeasonNote');
+        const modalSave = document.getElementById('checkoutModalSaveBtn');
+        const modalPaxErr = document.getElementById('checkoutModalPax-error');
+
+        const basePrice = /*[[${booking.safariPackage.basePrice}]]*/ 28500;
+        const multiplier = /*[[${booking.safariPackage.peakSeasonMultiplier}]]*/ 1.25;
+        const maxPax = /*[[${booking.safariPackage.maxGroupSize}]]*/ 6;
+
+        function recalcModal() {
+            if (!modalPax || !modalDate) return;
+            let pax = parseInt(modalPax.value, 10);
+            let isValid = true;
+            if (isNaN(pax) || pax < 1) {
+                if (modalPaxErr) modalPaxErr.textContent = '⚠️ Minimum 1 passenger required.';
+                modalPax.classList.add('is-invalid');
+                isValid = false;
+                pax = 1;
+            } else if (pax > maxPax) {
+                if (modalPaxErr) modalPaxErr.textContent = `⚠️ Exceeds max package capacity of ${maxPax}.`;
+                modalPax.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                if (modalPaxErr) modalPaxErr.textContent = '';
+                modalPax.classList.remove('is-invalid');
+            }
+
+            if (modalSave) modalSave.disabled = !isValid;
+
+            const dateVal = modalDate.value;
+            let isPeak = false;
+            if (dateVal) {
+                const parts = dateVal.split('-');
+                if (parts.length >= 2) {
+                    const month = parseInt(parts[1], 10);
+                    isPeak = (month === 7 || month === 8 || month === 12 || month === 1);
+                }
+            }
+            const effectiveMultiplier = isPeak ? multiplier : 1.0;
+            const total = (basePrice * pax) * effectiveMultiplier;
+            if (modalTotal) {
+                modalTotal.textContent = total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            if (modalNote) {
+                modalNote.textContent = isPeak ? `⚡ Peak Season (+${((multiplier - 1) * 100).toFixed(0)}%) Rate Applied` : `🌿 Standard Season Rate`;
+            }
+        }
+
+        if (modalPax) {
+            modalPax.addEventListener('keydown', (e) => {
+                if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
+            });
+            modalPax.addEventListener('input', recalcModal);
+            modalPax.addEventListener('change', recalcModal);
+        }
+        if (modalDate) {
+            modalDate.addEventListener('change', recalcModal);
+        }
+        recalcModal();
+    });
+</script>
 </body>
 </html>

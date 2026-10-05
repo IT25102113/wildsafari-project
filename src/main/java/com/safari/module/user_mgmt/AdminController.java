@@ -68,7 +68,9 @@ public class AdminController {
         model.addAttribute("totalGuides", allocationService.getAllGuides().size());
         model.addAttribute("totalVehicles", allocationService.getAllVehicles().size());
         model.addAttribute("lowStockItems", inventoryService.getLowStockEquipment().size());
-        model.addAttribute("revenueSummary", financeService.getRevenueReport());
+        var rev = financeService.getRevenueReport();
+        model.addAttribute("revenueSummary", rev);
+        model.addAttribute("revenueData", rev);
         model.addAttribute("recentLogs", activityLogService.getRecentLogs());
 
         return "admin/dashboard";

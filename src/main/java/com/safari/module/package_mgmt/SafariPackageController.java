@@ -31,6 +31,9 @@ public class SafariPackageController {
     @GetMapping
     public String browsePackages(@RequestParam(value = "park", required = false) String park,
                                  Model model, HttpSession session) {
+        if ("GUIDE".equalsIgnoreCase(UserSession.getCurrentRole(session))) {
+            return "redirect:/guide-portal/dashboard";
+        }
         List<SafariPackage> packages;
         if (park != null && !park.isBlank()) {
             packages = packageService.getActivePackages().stream()
@@ -48,6 +51,9 @@ public class SafariPackageController {
 
     @GetMapping("/{id}")
     public String viewPackageDetails(@PathVariable("id") Long id, Model model, HttpSession session) {
+        if ("GUIDE".equalsIgnoreCase(UserSession.getCurrentRole(session))) {
+            return "redirect:/guide-portal/dashboard";
+        }
         SafariPackage pkg = packageService.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Package not found"));
         model.addAttribute("pkg", pkg);

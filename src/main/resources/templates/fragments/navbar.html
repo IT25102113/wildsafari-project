@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<head>    <link rel="stylesheet" th:href="@{/css/bootstrap-icons.min.css}">
 </head>
 <body>
 <div th:fragment="navbar">
@@ -8,7 +8,7 @@
     <!-- Main Navigation Bar -->
     <nav class="navbar navbar-expand-lg safari-navbar sticky-top shadow-sm">
         <div class="container-fluid px-lg-4">
-            <a class="safari-brand" th:href="@{/}">
+            <a class="safari-brand" th:href="${currentRole == 'GUIDE' ? '/guide-portal/dashboard' : '/'}">
                 <span style="color: var(--safari-olive-dark); font-size: 1.5rem;">🌿</span>
                 <span>WildSafari<span style="color: var(--safari-rose-dark);">.lk</span></span>
                 <span class="safari-brand-badge d-none d-sm-inline">Sri Lanka</span>
@@ -20,13 +20,13 @@
 
             <div class="collapse navbar-collapse" id="safariNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4 gap-lg-1 align-items-lg-center">
-                    <li class="nav-item">
+                    <li class="nav-item" th:unless="${currentRole == 'GUIDE'}">
                         <a class="nav-link" th:href="@{/}">
                             <i class="bi bi-house-door"></i>
                             <span>Home</span>
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item" th:unless="${currentRole == 'GUIDE'}">
                         <a class="nav-link" th:href="@{/packages}">
                             <i class="bi bi-compass"></i>
                             <span>Safari Packages</span>
@@ -72,6 +72,12 @@
                             <span>Finance &amp; Invoices</span>
                         </a>
                     </li>
+                    <li class="nav-item" th:if="${currentRole == 'GUIDE'}">
+                        <a class="nav-link active text-success fw-bold" th:href="@{/guide-portal/dashboard}">
+                            <i class="bi bi-compass"></i>
+                            <span>Guide Portal</span>
+                        </a>
+                    </li>
 
                     <!-- Admin Hub & Modules Dropdown (Keeps navbar clean without wrapping) -->
                     <li class="nav-item" th:if="${currentRole == 'ADMIN'}">
@@ -87,13 +93,14 @@
                             <span>System Modules</span>
                         </a>
                         <ul class="dropdown-menu shadow" aria-labelledby="navbarModulesDropdown">
-                            <li><h6 class="dropdown-header small text-uppercase fw-bold text-muted">University Student Modules</h6></li>
-                            <li><a class="dropdown-item" th:href="@{/packages/manage}"><i class="bi bi-box-seam text-success"></i> 1. Safari Packages (Gallage)</a></li>
-                            <li><a class="dropdown-item" th:href="@{/bookings/manage}"><i class="bi bi-ticket-perforated text-primary"></i> 2. Booking Reservations (Gamarachchi)</a></li>
-                            <li><a class="dropdown-item" th:href="@{/allocation/dashboard}"><i class="bi bi-truck text-warning"></i> 3. Fleet &amp; Guides Allocation (Kalhara)</a></li>
-                            <li><a class="dropdown-item" th:href="@{/conservation/dashboard}"><i class="bi bi-shield-check text-info"></i> 4. Conservation &amp; DWC Permits (Gunawardhana)</a></li>
-                            <li><a class="dropdown-item" th:href="@{/inventory/dashboard}"><i class="bi bi-backpack text-danger"></i> 5. Depot Gear &amp; Inventory (Dimalsha)</a></li>
-                            <li><a class="dropdown-item" th:href="@{/finance/dashboard}"><i class="bi bi-receipt text-success"></i> 6. Payment &amp; Invoice Billing (Patabendi)</a></li>
+                            <li><h6 class="dropdown-header small text-uppercase fw-bold text-muted">Operations Modules</h6></li>
+                            <li><a class="dropdown-item" th:href="@{/packages/manage}"><i class="bi bi-box-seam text-success"></i> Safari Packages</a></li>
+                            <li><a class="dropdown-item" th:href="@{/bookings/manage}"><i class="bi bi-ticket-perforated text-primary"></i> Booking Reservations</a></li>
+                            <li><a class="dropdown-item" th:href="@{/allocation/dashboard}"><i class="bi bi-truck text-warning"></i> Fleet &amp; Guides Allocation</a></li>
+                            <li><a class="dropdown-item" th:href="@{/guide-portal/dashboard}"><i class="bi bi-compass text-warning"></i> Guide / Driver Portal</a></li>
+                            <li><a class="dropdown-item" th:href="@{/conservation/dashboard}"><i class="bi bi-shield-check text-info"></i> Conservation &amp; DWC Permits</a></li>
+                            <li><a class="dropdown-item" th:href="@{/inventory/dashboard}"><i class="bi bi-backpack text-danger"></i> Depot Gear &amp; Inventory</a></li>
+                            <li><a class="dropdown-item" th:href="@{/finance/dashboard}"><i class="bi bi-receipt text-success"></i> Payment &amp; Invoice Billing</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><h6 class="dropdown-header small text-uppercase fw-bold text-muted">Core Admin Services</h6></li>
                             <li><a class="dropdown-item" th:href="@{/admin/users}"><i class="bi bi-people"></i> Staff &amp; User Accounts</a></li>
@@ -110,7 +117,56 @@
                 </ul>
 
                 <!-- User Session & Auth Buttons -->
-                <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Universal Notification Bell Dropdown -->
+                    <div th:if="${currentUser != null}" class="dropdown">
+                        <button class="btn btn-sm btn-light border position-relative d-flex align-items-center justify-content-center p-2 shadow-sm"
+                                type="button" id="navbarNotifDropdown" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false"
+                                style="border-radius: 50%; width: 38px; height: 38px;" title="Notifications &amp; Alerts">
+                            <i class="bi bi-bell-fill" style="color: var(--safari-dark); font-size: 1.05rem;"></i>
+                            <span th:if="${navUnreadCount != null and navUnreadCount > 0}"
+                                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light"
+                                  style="font-size: 0.65rem;"
+                                  th:text="${navUnreadCount}">1</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 p-0" aria-labelledby="navbarNotifDropdown" style="width: 340px; max-width: 90vw; border-radius: 14px; overflow: hidden; z-index: 1070;">
+                            <li class="px-3 py-2 bg-light border-bottom d-flex align-items-center justify-content-between">
+                                <div class="fw-bold small text-dark d-flex align-items-center gap-2">
+                                    <i class="bi bi-bell-fill text-warning"></i>
+                                    <span>Notifications</span>
+                                    <span class="badge bg-danger rounded-pill" th:if="${navUnreadCount != null and navUnreadCount > 0}" th:text="${navUnreadCount} + ' unread'">1 unread</span>
+                                </div>
+                                <form th:if="${navUnreadCount != null and navUnreadCount > 0}" th:action="@{/notifications/read-all}" method="post" class="m-0">
+                                    <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none text-muted" style="font-size: 0.75rem;">Mark all read</button>
+                                </form>
+                            </li>
+                            <li th:if="${#lists.isEmpty(navNotifications)}" class="p-4 text-center text-muted">
+                                <i class="bi bi-bell-slash fs-3 d-block mb-1 opacity-50"></i>
+                                <span class="small">No notifications yet</span>
+                            </li>
+                            <li th:unless="${#lists.isEmpty(navNotifications)}" style="max-height: 380px; overflow-y: auto;">
+                                <div th:each="n : ${navNotifications}" class="p-3 border-bottom d-flex flex-column gap-1 position-relative transition-all"
+                                     th:style="${!n.read} ? 'background: #FFFDF5;' : 'background: #FFFFFF;'">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <span th:if="${n.type == 'CRITICAL' or n.type == 'INCIDENT_ALERT'}" class="badge bg-danger" style="font-size: 0.65rem;">🚨 CRITICAL</span>
+                                        <span th:if="${n.type == 'WARNING'}" class="badge bg-warning text-dark" style="font-size: 0.65rem;">⚠️ WARNING</span>
+                                        <span th:if="${n.type != 'CRITICAL' and n.type != 'INCIDENT_ALERT' and n.type != 'WARNING'}" class="badge bg-info text-dark" style="font-size: 0.65rem;">ℹ️ NOTICE</span>
+                                        <span class="text-muted" style="font-size: 0.7rem;" th:text="${#temporals.format(n.createdAt, 'MMM dd, HH:mm')}">Oct 05, 11:30</span>
+                                    </div>
+                                    <div class="fw-semibold text-dark small" th:text="${n.title}">Notification Title</div>
+                                    <div class="text-muted small" style="font-size: 0.78rem; line-height: 1.35; white-space: pre-line;" th:text="${n.message}">Message content...</div>
+                                    <div class="d-flex justify-content-end mt-1" th:unless="${n.read}">
+                                        <form th:action="@{/notifications/read/{id}(id=${n.id})}" method="post" class="m-0">
+                                            <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2" style="font-size: 0.7rem;">
+                                                <i class="bi bi-check2"></i> Mark read
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
                     <div th:if="${currentUser != null}" class="dropdown">
                         <button class="btn btn-sm btn-light border dropdown-toggle d-flex align-items-center gap-2 px-2 py-1 shadow-sm"
                                 type="button" id="userMenuDropdown" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false"
@@ -151,6 +207,12 @@
                                 <a class="dropdown-item py-2 d-flex align-items-center gap-2" th:href="@{/admin/dashboard}">
                                     <i class="bi bi-speedometer2 text-warning"></i>
                                     <span>Admin Hub</span>
+                                </a>
+                            </li>
+                            <li th:if="${currentRole == 'GUIDE'}">
+                                <a class="dropdown-item py-2 d-flex align-items-center gap-2" th:href="@{/guide-portal/dashboard}">
+                                    <i class="bi bi-compass text-success"></i>
+                                    <span>Guide Portal</span>
                                 </a>
                             </li>
                             <li><hr class="dropdown-divider my-1"></li>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us — WildSafari Sri Lanka</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/custom-safari.css}">
+    <link rel="stylesheet" th:href="@{/css/bootstrap-icons.min.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container my-5">
+    <div class="safari-card p-4 p-md-5 mb-5 shadow-sm text-center">
+        <span class="badge badge-safari-olive mb-3">About WildSafari</span>
+        <h1 class="display-5 fw-bold mb-3">Pioneering Sustainable Wildlife Safaris in Sri Lanka</h1>
+        <p class="lead text-muted mx-auto" style="max-width: 750px;">
+            WildSafari is Sri Lanka’s premier digital safari expedition ecosystem. We bridge the Department of Wildlife Conservation (DWC) guidelines with certified wildlife naturalists, specialized 4x4 safari fleets, and ethical tourists worldwide.
+        </p>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="safari-card p-4 h-100">
+                <div class="kpi-icon mb-3" style="background: var(--safari-olive-light); color: var(--safari-olive-dark);">🌿</div>
+                <h5 class="fw-bold mb-2">Ethical Conservation</h5>
+                <p class="text-muted small mb-0">Committed to protecting Ceylon's endangered leopards, Asian elephants, and sloth bears through responsible non-intrusive safari tracks.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="safari-card p-4 h-100">
+                <div class="kpi-icon mb-3" style="background: var(--safari-blush); color: var(--safari-rose-dark);">🧭</div>
+                <h5 class="fw-bold mb-2">Certified Naturalists</h5>
+                <p class="text-muted small mb-0">Every expedition is escorted by accredited field guides with deep tracking knowledge across Yala, Wilpattu, Udawalawe, and Minneriya.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="safari-card p-4 h-100">
+                <div class="kpi-icon mb-3" style="background: var(--safari-cream); color: #6C5E1B;">🚙</div>
+                <h5 class="fw-bold mb-2">High-Elevation Cruisers</h5>
+                <p class="text-muted small mb-0">Custom-engineered safari 4x4 vehicles designed for ultimate safety, photography vantage points, and comfort across all national terrain.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

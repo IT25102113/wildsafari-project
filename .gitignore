@@ -34,3 +34,9 @@ build/
 ### OS Files ###
 .DS_Store
 Thumbs.db
+
+### Generated Reports & Documentation ###
+*.docx
+generate_report_docx.py
+screenshots/
+src/main/resources/static/report-section-5.html

@@ -48,6 +48,7 @@ public class DataInitializer implements CommandLineRunner {
     private final PaymentRepository paymentRepository;
     private final InvoiceRepository invoiceRepository;
     private final ActivityLogService activityLogService;
+    private final com.safari.common.NotificationService notificationService;
 
     public DataInitializer(UserRepository userRepository,
                            SafariPackageRepository packageRepository,
@@ -61,7 +62,8 @@ public class DataInitializer implements CommandLineRunner {
                            EquipmentRepository equipmentRepository,
                            PaymentRepository paymentRepository,
                            InvoiceRepository invoiceRepository,
-                           ActivityLogService activityLogService) {
+                           ActivityLogService activityLogService,
+                           com.safari.common.NotificationService notificationService) {
         this.userRepository = userRepository;
         this.packageRepository = packageRepository;
         this.guideRepository = guideRepository;
@@ -75,6 +77,7 @@ public class DataInitializer implements CommandLineRunner {
         this.paymentRepository = paymentRepository;
         this.invoiceRepository = invoiceRepository;
         this.activityLogService = activityLogService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -93,6 +96,15 @@ public class DataInitializer implements CommandLineRunner {
         User logistics = userRepository.save(new User("Nuwan Jayalath (Logistics Supervisor)", "logistics@safari.lk", "logistics123", "0785566778", "LOGISTICS_STAFF"));
         User finance = userRepository.save(new User("Anjali Wickramasinghe (Finance Manager)", "finance@safari.lk", "finance123", "0759988776", "FINANCE_OFFICER"));
         User tourist = userRepository.save(new User("Kavinda Perera (Tourist)", "kavinda.perera@gmail.com", "pass123", "0777654321", "CUSTOMER"));
+        userRepository.save(new User("Sunil Bandara (Licensed Senior Naturalist & Driver)", "sunil.bandara@gmail.com", "guide123", "0772345678", "GUIDE"));
+
+        // Seed initial notifications
+        notificationService.send(
+                "sunil.bandara@gmail.com",
+                "New Safari Assignment",
+                "You have been assigned as lead naturalist for expedition WS-2026-10492 (Yala Big 4 Predator Expedition).",
+                "TRIP_ASSIGNED"
+        );
 
         // 2. Seed Safari Packages
         SafariPackage pkg1 = new SafariPackage();

@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conservation & Compliance Registry — WildSafari</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/custom-safari.css}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" th:href="@{/css/bootstrap-icons.min.css}">
 </head>
 <body>
 
@@ -17,11 +17,18 @@
 <div class="container my-5">
     <div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
         <div>
-            <span class="badge badge-safari-olive mb-1">Module 4 &bull; Gunawardhana M.S (IT25101131)</span>
+            <span class="badge badge-safari-olive mb-1">Conservation &amp; Wildlife Compliance</span>
             <h2 class="fw-bold mb-0">Conservation & Compliance Oversight</h2>
             <p class="text-muted small mb-0">DWC official entry permits, scientific wildlife observations, and safety incident logs</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-warning btn-sm text-dark fw-bold shadow-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#broadcastAlertModal">
+                <i class="bi bi-broadcast"></i> Broadcast DWC Alert
+            </button>
+            <a href="#notificationsSection" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 position-relative">
+                <i class="bi bi-bell-fill text-warning"></i> DWC Alerts
+                <span class="badge bg-danger rounded-pill ms-1" th:if="${unreadCount != null and unreadCount > 0}" th:text="${unreadCount}">0</span>
+            </a>
             <button class="btn btn-safari-outline btn-sm" data-bs-toggle="modal" data-bs-target="#issuePermitModal">+ Issue Park Permit</button>
             <button class="btn btn-safari-primary btn-sm" data-bs-toggle="modal" data-bs-target="#recordSightingModal">+ Record Wildlife Sighting</button>
             <button class="btn btn-safari-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#reportIncidentModal">+ File Incident</button>
@@ -58,6 +65,66 @@
                     <div class="small text-muted">Audited & Investigated</div>
                 </div>
                 <div class="kpi-icon" style="background-color: var(--safari-cream); color: #6C5E1B;">🚨</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DWC Field Alerts & Notifications Section -->
+    <div class="safari-card p-4 mb-5 border-start border-4 border-warning shadow-sm" id="notificationsSection">
+        <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fs-4">📢</span>
+                <div>
+                    <h5 class="fw-bold mb-0">DWC Field Alerts &amp; Advisory Feed</h5>
+                    <p class="text-muted small mb-0">Broadcast emergency notices, animal movement warnings, and monitor incoming incident alerts</p>
+                </div>
+                <span class="badge bg-danger ms-2" th:if="${unreadCount != null and unreadCount > 0}" th:text="${unreadCount} + ' New Alert(s)'">1 New Alert(s)</span>
+            </div>
+            <div class="d-flex gap-2">
+                <form th:if="${unreadCount != null and unreadCount > 0}" th:action="@{/conservation/notifications/read-all}" method="post" class="m-0">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-check2-all"></i> Mark All as Read
+                    </button>
+                </form>
+                <button class="btn btn-warning btn-sm text-dark fw-bold" data-bs-toggle="modal" data-bs-target="#broadcastAlertModal">
+                    <i class="bi bi-broadcast me-1"></i> + New Advisory Broadcast
+                </button>
+            </div>
+        </div>
+
+        <!-- Empty state -->
+        <div th:if="${#lists.isEmpty(notifications)}" class="text-center py-4 bg-light rounded-3">
+            <div class="fs-2 text-muted mb-2">🌿</div>
+            <h6 class="fw-bold text-muted mb-1">No Active Park Alerts</h6>
+            <p class="small text-muted mb-0">All national parks, trails, and observation sectors are operating normally.</p>
+        </div>
+
+        <!-- Notification List -->
+        <div class="d-flex flex-column gap-2" th:unless="${#lists.isEmpty(notifications)}">
+            <div th:each="n : ${notifications}" class="p-3 rounded-3 border transition-all"
+                 th:style="${!n.read} ? 'background: #FFFDF5; border-color: #FDE68A !important;' : 'background: #FFFFFF; border-color: #E5E7EB !important;'">
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                    <div class="d-flex align-items-start gap-2">
+                        <span th:if="${n.type == 'CRITICAL' or n.type == 'INCIDENT_ALERT'}" class="badge bg-danger">🚨 CRITICAL</span>
+                        <span th:if="${n.type == 'WARNING'}" class="badge bg-warning text-dark">⚠️ CAUTION</span>
+                        <span th:if="${n.type != 'CRITICAL' and n.type != 'INCIDENT_ALERT' and n.type != 'WARNING'}" class="badge bg-info text-dark">ℹ️ NOTICE</span>
+                        <div>
+                            <div class="fw-bold text-dark" th:text="${n.title}">Alert Title</div>
+                            <div class="small text-muted mt-1" style="white-space: pre-line;" th:text="${n.message}">Advisory message text...</div>
+                            <div class="text-muted mt-2" style="font-size: 0.75rem;">
+                                <i class="bi bi-clock me-1"></i>
+                                <span th:text="${#temporals.format(n.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-05 11:00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div th:unless="${n.read}">
+                        <form th:action="@{/conservation/notifications/read/{id}(id=${n.id})}" method="post" class="m-0">
+                            <button type="submit" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.78rem;">
+                                <i class="bi bi-check-lg"></i> Acknowledge
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -423,7 +490,77 @@
     </div>
 </div>
 
+<!-- Modal: Broadcast DWC Park Alert / Advisory -->
+<div class="modal fade" id="broadcastAlertModal" tabindex="-1" aria-labelledby="broadcastAlertModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom px-4 py-3" style="background-color: #FFFBEB;">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fs-4">📢</span>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="broadcastAlertModalLabel">Broadcast DWC Park Advisory</h5>
+                        <p class="text-muted small mb-0">Dispatch official field notices to Naturalist Guides &amp; Operations</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form th:action="@{/conservation/broadcast}" method="post">
+                <div class="modal-body px-4 py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Target Audience <span class="text-danger">*</span></label>
+                        <select name="targetAudience" class="form-select safari-input" required>
+                            <option value="ALL">Entire Field Network (All Guides, Dispatchers &amp; Admin)</option>
+                            <option value="GUIDES">Field Naturalists &amp; Drivers Only (Guide Portals)</option>
+                            <option value="ADMIN">Operations Control &amp; Admin Desk Only</option>
+                        </select>
+                        <div class="form-text small">Select who receives this alert on their dashboard notification feed.</div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">National Park <span class="text-danger">*</span></label>
+                            <select name="parkName" class="form-select safari-input" required>
+                                <option value="Yala National Park">Yala National Park</option>
+                                <option value="Wilpattu National Park">Wilpattu National Park</option>
+                                <option value="Udawalawe National Park">Udawalawe National Park</option>
+                                <option value="Minneriya National Park">Minneriya National Park</option>
+                                <option value="Bundala National Park">Bundala National Park</option>
+                                <option value="Sinharaja Rain Forest">Sinharaja Rain Forest</option>
+                                <option value="All National Parks">All National Parks (Island-wide)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Alert Level / Severity <span class="text-danger">*</span></label>
+                            <select name="alertLevel" class="form-select safari-input" required>
+                                <option value="WARNING">⚠️ CAUTION (Animal Movement / Track Hazard)</option>
+                                <option value="CRITICAL">🚨 CRITICAL (Emergency / Sector Closed / Poaching)</option>
+                                <option value="INFO">ℹ️ ADVISORY (Weather Update / General Guidance)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Advisory Headline / Title <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control safari-input" placeholder="e.g. Heavy Rain: Buthawa Track 2 Closed in Yala Block 1" required maxlength="120">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Directive Details &amp; Field Instructions <span class="text-danger">*</span></label>
+                        <textarea name="message" class="form-control safari-input" rows="4" placeholder="Enter clear instructions for naturalist guides and safari jeeps. e.g. All vehicles must redirect through main coastal corridor. DWC patrol unit deployed on VHF Channel 4." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top px-4 py-3 bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning btn-sm text-dark fw-bold px-3">
+                        <i class="bi bi-broadcast me-1"></i> Transmit Field Advisory
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div th:replace="~{fragments/footer :: footer}"></div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
 </body>
 </html>

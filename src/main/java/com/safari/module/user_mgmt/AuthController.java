@@ -163,6 +163,9 @@ public class AuthController {
             case "FINANCE_OFFICER":
                 targetEmail = "finance@safari.lk";
                 break;
+            case "GUIDE":
+                targetEmail = "sunil.bandara@gmail.com";
+                break;
             case "CUSTOMER":
             default:
                 targetEmail = "kavinda.perera@gmail.com";

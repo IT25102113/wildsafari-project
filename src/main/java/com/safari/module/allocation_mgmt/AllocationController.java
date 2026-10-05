@@ -183,6 +183,47 @@ public class AllocationController {
         return "redirect:/allocation/guides";
     }
 
+    @PostMapping("/guides/update/{id}")
+    public String updateGuide(@PathVariable("id") Long id,
+                              @Valid @ModelAttribute("guide") Guide guide,
+                              BindingResult bindingResult,
+                              HttpSession session,
+                              RedirectAttributes redirectAttributes) {
+        User user = UserSession.getLoggedInUser(session);
+        String actorEmail = (user != null) ? user.getEmail() : "ops@safari.lk";
+
+        if (!guide.getContactNumber().matches("^0[0-9]{9}$|^[0-9]{10}$")) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Validation failed: Guide contact number must be exactly 10 digits.");
+            return "redirect:/allocation/guides";
+        }
+
+        try {
+            allocationService.updateGuide(id, guide, actorEmail);
+            redirectAttributes.addFlashAttribute("successMessage", "Guide profile updated successfully!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+
+        return "redirect:/allocation/guides";
+    }
+
+    @PostMapping("/guides/delete/{id}")
+    public String deleteGuide(@PathVariable("id") Long id,
+                              HttpSession session,
+                              RedirectAttributes redirectAttributes) {
+        User user = UserSession.getLoggedInUser(session);
+        String actorEmail = (user != null) ? user.getEmail() : "ops@safari.lk";
+
+        try {
+            allocationService.deleteGuide(id, actorEmail);
+            redirectAttributes.addFlashAttribute("successMessage", "Guide profile removed successfully.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+
+        return "redirect:/allocation/guides";
+    }
+
     // Vehicle Management
     @GetMapping("/vehicles")
     public String manageVehicles(Model model, HttpSession session) {
@@ -220,6 +261,42 @@ public class AllocationController {
         try {
             allocationService.saveVehicle(vehicle, actorEmail);
             redirectAttributes.addFlashAttribute("successMessage", "Vehicle record saved successfully!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+
+        return "redirect:/allocation/vehicles";
+    }
+
+    @PostMapping("/vehicles/update/{id}")
+    public String updateVehicle(@PathVariable("id") Long id,
+                                @Valid @ModelAttribute("vehicle") Vehicle vehicle,
+                                BindingResult bindingResult,
+                                HttpSession session,
+                                RedirectAttributes redirectAttributes) {
+        User user = UserSession.getLoggedInUser(session);
+        String actorEmail = (user != null) ? user.getEmail() : "ops@safari.lk";
+
+        try {
+            allocationService.updateVehicle(id, vehicle, actorEmail);
+            redirectAttributes.addFlashAttribute("successMessage", "Vehicle specifications updated successfully!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+
+        return "redirect:/allocation/vehicles";
+    }
+
+    @PostMapping("/vehicles/delete/{id}")
+    public String deleteVehicle(@PathVariable("id") Long id,
+                                HttpSession session,
+                                RedirectAttributes redirectAttributes) {
+        User user = UserSession.getLoggedInUser(session);
+        String actorEmail = (user != null) ? user.getEmail() : "ops@safari.lk";
+
+        try {
+            allocationService.deleteVehicle(id, actorEmail);
+            redirectAttributes.addFlashAttribute("successMessage", "Vehicle record removed successfully.");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }

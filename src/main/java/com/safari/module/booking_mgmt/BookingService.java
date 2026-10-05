@@ -1,6 +1,7 @@
 package com.safari.module.booking_mgmt;
 
 import com.safari.common.ActivityLogService;
+import com.safari.module.finance_mgmt.PaymentRepository;
 import com.safari.module.package_mgmt.SafariPackage;
 import com.safari.module.package_mgmt.SafariPackageRepository;
 import com.safari.patterns.factory.ReferenceFactory;
@@ -23,35 +24,67 @@ public class BookingService {
     private final BookingParticipantRepository participantRepository;
     private final SafariPackageRepository packageRepository;
     private final ActivityLogService activityLogService;
+    private final PaymentRepository paymentRepository;
 
     public BookingService(BookingRepository bookingRepository,
                           BookingParticipantRepository participantRepository,
                           SafariPackageRepository packageRepository,
-                          ActivityLogService activityLogService) {
+                          ActivityLogService activityLogService,
+                          PaymentRepository paymentRepository) {
         this.bookingRepository = bookingRepository;
         this.participantRepository = participantRepository;
         this.packageRepository = packageRepository;
         this.activityLogService = activityLogService;
+        this.paymentRepository = paymentRepository;
     }
 
     public List<Booking> getAllBookings() {
-        return bookingRepository.findAllByOrderByCreatedAtDesc();
+        List<Booking> list = bookingRepository.findAllByOrderByCreatedAtDesc();
+        syncPendingPayments(list);
+        return list;
     }
 
     public List<Booking> getCustomerBookings(String email) {
-        return bookingRepository.findByCustomerEmailOrderByCreatedAtDesc(email);
+        List<Booking> list = bookingRepository.findByCustomerEmailOrderByCreatedAtDesc(email);
+        syncPendingPayments(list);
+        return list;
     }
 
     public List<Booking> getCustomerBookingsById(Long customerId) {
-        return bookingRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
+        List<Booking> list = bookingRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
+        syncPendingPayments(list);
+        return list;
     }
 
     public Optional<Booking> findById(Long id) {
-        return bookingRepository.findById(id);
+        Optional<Booking> opt = bookingRepository.findById(id);
+        opt.ifPresent(this::syncPendingPayment);
+        return opt;
     }
 
     public Optional<Booking> findByReference(String reference) {
-        return bookingRepository.findByBookingReference(reference);
+        Optional<Booking> opt = bookingRepository.findByBookingReference(reference);
+        opt.ifPresent(this::syncPendingPayment);
+        return opt;
+    }
+
+    private void syncPendingPayments(List<Booking> list) {
+        if (list != null) {
+            for (Booking b : list) {
+                syncPendingPayment(b);
+            }
+        }
+    }
+
+    private void syncPendingPayment(Booking b) {
+        if (b != null && "UNPAID".equalsIgnoreCase(b.getPaymentStatus()) && b.getId() != null) {
+            boolean hasPending = paymentRepository.findByBookingId(b.getId()).stream()
+                    .anyMatch(p -> "PENDING".equalsIgnoreCase(p.getPaymentStatus()));
+            if (hasPending) {
+                b.setPaymentStatus("PENDING");
+                bookingRepository.save(b);
+            }
+        }
     }
 
     @Transactional
@@ -61,6 +94,14 @@ public class BookingService {
 
         if ("DISCONTINUED".equalsIgnoreCase(pkg.getStatus())) {
             throw new IllegalStateException("This safari package has been discontinued and cannot accept new reservations.");
+        }
+
+        if (booking.getTripDate() == null || booking.getTripDate().isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Expedition date cannot be in the past. Please select today or a future date.");
+        }
+
+        if (booking.getParticipantCount() < 1) {
+            throw new IllegalArgumentException("Participant count must be at least 1 passenger.");
         }
 
         if (booking.getParticipantCount() > pkg.getMaxGroupSize()) {
@@ -106,23 +147,44 @@ public class BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
 
-        // 48-Hour Cut-off Policy check
-        long daysUntilTrip = ChronoUnit.DAYS.between(LocalDate.now(), booking.getTripDate());
-        if (daysUntilTrip < 2) {
-            throw new IllegalStateException("Modifications are only permitted at least 48 hours prior to the scheduled safari date.");
+        // LOCK: Cannot edit if a PAID or PENDING payment exists
+        boolean hasPayment = paymentRepository.findByBookingId(bookingId).stream()
+                .anyMatch(p -> "PAID".equalsIgnoreCase(p.getPaymentStatus()) || "PENDING".equalsIgnoreCase(p.getPaymentStatus()));
+        if (hasPayment) {
+            throw new IllegalStateException(
+                "This booking cannot be modified — a payment has already been submitted. " +
+                "Please contact the tour operator for amendments.");
+        }
+
+        // 48-Hour Cut-off Policy check (applies if booking is already paid)
+        if ("PAID".equalsIgnoreCase(booking.getPaymentStatus())) {
+            long daysUntilTrip = ChronoUnit.DAYS.between(LocalDate.now(), booking.getTripDate());
+            if (daysUntilTrip < 2) {
+                throw new IllegalStateException("Modifications are only permitted at least 48 hours prior to the scheduled safari date.");
+            }
+        }
+
+        if (newDate == null || newDate.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Rescheduled expedition date cannot be in the past.");
+        }
+
+        if (newParticipants < 1) {
+            throw new IllegalArgumentException("Participant count must be at least 1 passenger.");
         }
 
         if (newParticipants > booking.getSafariPackage().getMaxGroupSize()) {
-            throw new IllegalArgumentException("Participant count exceeds max package limit.");
+            throw new IllegalArgumentException("Participant count exceeds max package limit (" + booking.getSafariPackage().getMaxGroupSize() + ").");
         }
 
         booking.setTripDate(newDate);
         booking.setParticipantCount(newParticipants);
         booking.setSpecialRequests(specialRequests);
 
-        // Recalculate price
-        PricingContext pricingContext = new PricingContext(new StandardPricingStrategy());
-        BigDecimal updatedTotal = pricingContext.executePricing(
+        // Recalculate price using peak season strategy if applicable
+        int month = newDate.getMonthValue();
+        boolean isPeak = (month == 7 || month == 8 || month == 12 || month == 1);
+        PricingContext ctx = new PricingContext(isPeak ? new PeakSeasonPricingStrategy() : new StandardPricingStrategy());
+        BigDecimal updatedTotal = ctx.executePricing(
                 booking.getSafariPackage().getBasePrice(),
                 newParticipants,
                 booking.getSafariPackage().getPeakSeasonMultiplier()
@@ -136,7 +198,7 @@ public class BookingService {
                 "CUSTOMER",
                 "Booking & Reservation",
                 "UPDATE_BOOKING",
-                "Booking " + saved.getBookingReference() + " was rescheduled to " + newDate
+                "Booking " + saved.getBookingReference() + " updated — " + newParticipants + " pax, date: " + newDate + ", new total: LKR " + updatedTotal
         );
 
         return saved;

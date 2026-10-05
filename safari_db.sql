@@ -17,6 +17,8 @@ USE `safari_db`;
 
 -- Drop existing tables in reverse dependency order
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS `notifications`;
+DROP TABLE IF EXISTS `guide_availability`;
 DROP TABLE IF EXISTS `activity_logs`;
 DROP TABLE IF EXISTS `invoices`;
 DROP TABLE IF EXISTS `payments`;
@@ -219,9 +221,10 @@ CREATE TABLE `equipment_inventory` (
 
 -- ----------------------------------------------------------
 -- 12. Equipment Allocations Table (Module 5: Dimalsha K.G.T - IT25101218)
+-- Composite Primary Key: (equipment_id, booking_id) as required by academic evaluation
 -- ----------------------------------------------------------
 CREATE TABLE `equipment_allocations` (
-  `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `id` BIGINT AUTO_INCREMENT,
   `equipment_id` BIGINT NOT NULL,
   `booking_id` BIGINT NOT NULL,
   `allocated_quantity` INT NOT NULL DEFAULT 1,
@@ -229,6 +232,8 @@ CREATE TABLE `equipment_allocations` (
   `return_date` DATE NULL,
   `status` VARCHAR(50) NOT NULL DEFAULT 'ISSUED',
   `remarks` TEXT NULL,
+  PRIMARY KEY (`equipment_id`, `booking_id`),
+  KEY `idx_eqalloc_id` (`id`),
   CONSTRAINT `fk_eqalloc_eq` FOREIGN KEY (`equipment_id`) REFERENCES `equipment_inventory` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_eqalloc_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -283,6 +288,31 @@ CREATE TABLE `activity_logs` (
   `timestamp` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ----------------------------------------------------------
+-- 16. Guide Availability Table (Module 3: Kalhara N.O - IT25100156)
+-- ----------------------------------------------------------
+CREATE TABLE `guide_availability` (
+  `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `guide_id` BIGINT NOT NULL,
+  `unavailable_date` DATE NOT NULL,
+  `reason` VARCHAR(255) NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT `fk_guide_avail_g` FOREIGN KEY (`guide_id`) REFERENCES `guides` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------
+-- 17. System Notifications Table (Cross-Module Alerts)
+-- ----------------------------------------------------------
+CREATE TABLE `notifications` (
+  `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `recipient_email` VARCHAR(150) NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `message` TEXT NOT NULL,
+  `type` VARCHAR(50) NOT NULL DEFAULT 'INFO',
+  `is_read` BOOLEAN NOT NULL DEFAULT FALSE,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ==========================================================
 -- REALISTIC INITIAL SEED DATA
 -- Sri Lankan Wildlife Safari Context (No AI placeholders)
@@ -296,6 +326,7 @@ INSERT INTO `users` (`full_name`, `email`, `password`, `phone`, `role`) VALUES
 ('Pradeep Bandara (DWC Ranger / Officer)', 'ranger@safari.lk', 'ranger123', '0761122334', 'CONSERVATION_OFFICER'),
 ('Nuwan Jayalath (Logistics Supervisor)', 'logistics@safari.lk', 'logistics123', '0785566778', 'LOGISTICS_STAFF'),
 ('Anjali Wickramasinghe (Finance Manager)', 'finance@safari.lk', 'finance123', '0759988776', 'FINANCE_OFFICER'),
+('Sunil Bandara (Licensed Senior Naturalist & Driver)', 'sunil.bandara@gmail.com', 'guide123', '0772345678', 'GUIDE'),
 ('Kavinda Perera (Tourist)', 'kavinda.perera@gmail.com', 'pass123', '0777654321', 'CUSTOMER');
 
 -- 2. Safari Packages

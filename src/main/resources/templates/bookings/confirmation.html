@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Booking Confirmation Voucher — WildSafari</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/custom-safari.css}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" th:href="@{/css/bootstrap-icons.min.css}">
 </head>
 <body>
 
@@ -56,7 +56,7 @@
                         <div class="p-3 rounded-3" style="background-color: var(--safari-bg); border: 1px solid var(--safari-border);">
                             <div class="small text-muted">Payment Status</div>
                             <span class="badge fs-6 mt-1"
-                                  th:classappend="${booking.paymentStatus == 'PAID'} ? 'badge-safari-olive' : 'badge-safari-rose'"
+                                  th:classappend="${booking.paymentStatus == 'PAID'} ? 'badge-safari-olive' : (${booking.paymentStatus == 'PENDING'} ? 'badge-safari-cream text-warning-emphasis fw-bold' : 'badge-safari-rose')"
                                   th:text="${booking.paymentStatus}">UNPAID</span>
                         </div>
                     </div>
@@ -122,14 +122,23 @@
                         </div>
                     </div>
 
-                    <div th:if="${booking.paymentStatus != 'PAID'}" class="mt-3 mt-sm-0">
-                        <a th:if="${currentRole == 'CUSTOMER'}" th:href="@{'/finance/checkout/' + ${booking.id}}" class="btn btn-safari-primary btn-lg">
-                            Proceed to Payment &rarr;
+                    <div th:if="${booking.paymentStatus == 'UNPAID'}" class="d-flex align-items-center gap-2 mt-3 mt-sm-0 flex-wrap">
+                        <a th:href="@{'/finance/checkout/' + ${booking.id}}" class="btn btn-safari-primary btn-lg shadow-sm">
+                            <i class="bi bi-credit-card me-2"></i>Proceed to Payment &rarr;
                         </a>
-                        <span th:if="${currentRole != 'CUSTOMER'}" class="badge badge-safari-rose p-2">Pending Customer Payment</span>
+                        <a th:href="@{/bookings/my-bookings}" class="btn btn-outline-secondary btn-lg" title="Settle payment anytime before departure">
+                            <i class="bi bi-clock-history me-1"></i>Pay Later
+                        </a>
                     </div>
-                    <div th:if="${booking.paymentStatus == 'PAID'}" class="mt-3 mt-sm-0">
-                        <span class="badge badge-safari-olive p-2">Payment Settled (Invoice Issued)</span>
+                    <div th:if="${booking.paymentStatus == 'PENDING'}" class="d-flex align-items-center gap-2 mt-3 mt-sm-0 flex-wrap">
+                        <span class="badge badge-safari-cream p-2 fs-6 text-warning-emphasis">
+                            <i class="bi bi-hourglass-split me-1"></i>Bank Slip Uploaded (Verification Pending)
+                        </span>
+                        <a th:href="@{/bookings/my-bookings}" class="btn btn-outline-secondary btn-sm">My Bookings</a>
+                    </div>
+                    <div th:if="${booking.paymentStatus == 'PAID'}" class="d-flex align-items-center gap-2 mt-3 mt-sm-0">
+                        <span class="badge badge-safari-olive p-2 fs-6"><i class="bi bi-check-circle-fill me-1"></i>Payment Settled (Invoice Issued)</span>
+                        <a th:href="@{'/finance/invoice/' + ${booking.id}}" class="btn btn-sm btn-safari-outline">View Invoice</a>
                     </div>
                 </div>
 
@@ -143,6 +152,6 @@
 </div>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
 </body>
 </html>

@@ -46,6 +46,11 @@ public class BookingController {
             return "redirect:/login?redirect=/bookings/new/" + packageId;
         }
 
+        if ("GUIDE".equalsIgnoreCase(user.getRole())) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Guides and field naturalists cannot book packages. Please manage your assigned tours in your Guide Portal.");
+            return "redirect:/guide-portal/dashboard";
+        }
+
         SafariPackage pkg = packageService.findById(packageId)
                 .orElseThrow(() -> new IllegalArgumentException("Safari Package not found"));
 
@@ -67,6 +72,7 @@ public class BookingController {
 
     @PostMapping("/create")
     public String createBooking(@RequestParam("packageId") Long packageId,
+                                @RequestParam(value = "action", required = false, defaultValue = "payNow") String action,
                                 @Valid @ModelAttribute("booking") Booking booking,
                                 BindingResult bindingResult,
                                 HttpSession session,
@@ -76,6 +82,11 @@ public class BookingController {
         if (user == null) {
             redirectAttributes.addFlashAttribute("errorMessage", "Your session has expired. Please sign in to book your expedition.");
             return "redirect:/login?redirect=/bookings/new/" + packageId;
+        }
+
+        if ("GUIDE".equalsIgnoreCase(user.getRole())) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Guides and field naturalists cannot book packages. Please manage your assigned tours in your Guide Portal.");
+            return "redirect:/guide-portal/dashboard";
         }
 
         SafariPackage pkg = packageService.findById(packageId)
@@ -114,6 +125,11 @@ public class BookingController {
 
         try {
             Booking saved = bookingService.createBooking(booking, packageId, actorEmail);
+            if ("payLater".equalsIgnoreCase(action)) {
+                redirectAttributes.addFlashAttribute("successMessage",
+                        "Reservation confirmed & saved! Reference: " + saved.getBookingReference() + ". You can settle payment anytime before departure in My Bookings.");
+                return "redirect:/bookings/my-bookings";
+            }
             redirectAttributes.addFlashAttribute("successMessage", "Booking created successfully! Reference: " + saved.getBookingReference());
             return "redirect:/bookings/confirmation/" + saved.getBookingReference();
         } catch (Exception e) {
@@ -157,11 +173,17 @@ public class BookingController {
     }
 
     @GetMapping("/my-bookings")
-    public String myBookings(Model model, HttpSession session, RedirectAttributes redirectAttributes) {
+    public String myBookings(@RequestParam(value = "sortBy", defaultValue = "time") String sortBy,
+                             @RequestParam(value = "filter", defaultValue = "all") String filter,
+                             Model model, HttpSession session, RedirectAttributes redirectAttributes) {
         User user = UserSession.getLoggedInUser(session);
         if (user == null) {
             redirectAttributes.addFlashAttribute("infoMessage", "Please sign in to view your bookings.");
             return "redirect:/login?redirect=/bookings/my-bookings";
+        }
+
+        if ("GUIDE".equalsIgnoreCase(user.getRole())) {
+            return "redirect:/guide-portal/dashboard";
         }
 
         // Query by userId (always set on booking create) — email can be null in some DB rows
@@ -171,7 +193,52 @@ public class BookingController {
         byEmail.stream()
                .filter(b -> bookings.stream().noneMatch(eb -> eb.getId().equals(b.getId())))
                .forEach(bookings::add);
-        bookings.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+
+        if ("date".equalsIgnoreCase(sortBy)) {
+            // Sort by scheduled Trip Date (Latest / Newest scheduled trip date first)
+            bookings.sort((a, b) -> {
+                if (a.getTripDate() == null && b.getTripDate() == null) return 0;
+                if (a.getTripDate() == null) return 1;
+                if (b.getTripDate() == null) return -1;
+                return b.getTripDate().compareTo(a.getTripDate());
+            });
+        } else {
+            // Default: Sort by Booking Creation Time (Latest booked time first)
+            bookings.sort((a, b) -> {
+                if (a.getCreatedAt() != null && b.getCreatedAt() != null) {
+                    return b.getCreatedAt().compareTo(a.getCreatedAt());
+                }
+                if (a.getId() != null && b.getId() != null) {
+                    return b.getId().compareTo(a.getId());
+                }
+                return 0;
+            });
+        }
+
+        long totalCount = bookings.size();
+        long paidCount = bookings.stream()
+                .filter(b -> "PAID".equalsIgnoreCase(b.getPaymentStatus()) && !"CANCELLED".equalsIgnoreCase(b.getBookingStatus()))
+                .count();
+        long pendingCount = bookings.stream()
+                .filter(b -> !"PAID".equalsIgnoreCase(b.getPaymentStatus())
+                          && !"CANCELLED".equalsIgnoreCase(b.getBookingStatus())
+                          && !"REFUNDED".equalsIgnoreCase(b.getPaymentStatus())
+                          && !"REFUND_PENDING".equalsIgnoreCase(b.getPaymentStatus()))
+                .count();
+        long refundedCount = bookings.stream()
+                .filter(b -> "REFUNDED".equalsIgnoreCase(b.getPaymentStatus()) || "REFUND_PENDING".equalsIgnoreCase(b.getPaymentStatus()))
+                .count();
+        long cancelledCount = bookings.stream()
+                .filter(b -> "CANCELLED".equalsIgnoreCase(b.getBookingStatus()))
+                .count();
+
+        model.addAttribute("sortBy", sortBy);
+        model.addAttribute("filter", filter != null ? filter.toLowerCase() : "all");
+        model.addAttribute("totalCount", totalCount);
+        model.addAttribute("paidCount", paidCount);
+        model.addAttribute("pendingCount", pendingCount);
+        model.addAttribute("refundedCount", refundedCount);
+        model.addAttribute("cancelledCount", cancelledCount);
         model.addAttribute("bookings", bookings);
         model.addAttribute("currentUser", user);
         model.addAttribute("currentRole", user.getRole());
@@ -217,17 +284,22 @@ public class BookingController {
     public String updateBooking(@PathVariable("id") Long id,
                                 @RequestParam("tripDate") LocalDate tripDate,
                                 @RequestParam("participantCount") int participantCount,
-                                @RequestParam("specialRequests") String specialRequests,
+                                @RequestParam(value = "specialRequests", required = false) String specialRequests,
+                                @RequestParam(value = "redirect", required = false) String redirect,
                                 HttpSession session,
                                 RedirectAttributes redirectAttributes) {
         User user = UserSession.getLoggedInUser(session);
         String actorEmail = (user != null) ? user.getEmail() : "customer@safari.lk";
 
         try {
-            bookingService.updateBooking(id, tripDate, participantCount, specialRequests, actorEmail);
+            bookingService.updateBooking(id, tripDate, participantCount, specialRequests != null ? specialRequests : "", actorEmail);
             redirectAttributes.addFlashAttribute("successMessage", "Booking details successfully updated!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+
+        if (redirect != null && !redirect.isBlank()) {
+            return "redirect:" + redirect;
         }
 
         return (user != null && "CUSTOMER".equalsIgnoreCase(user.getRole())) ? "redirect:/bookings/my-bookings" : "redirect:/bookings/manage";

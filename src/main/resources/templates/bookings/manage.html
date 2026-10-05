@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Master Reservations Dashboard — WildSafari</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/custom-safari.css}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" th:href="@{/css/bootstrap-icons.min.css}">
 </head>
 <body>
 
@@ -15,11 +15,15 @@
 <div th:replace="~{fragments/alerts :: alerts}"></div>
 
 <div class="container my-5">
-    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
-        <div>
-            <h2 class="fw-bold mb-0">Master Reservations Registry</h2>
-            <p class="text-muted small mb-0">Central reservation management across all Sri Lankan national parks</p>
-        </div>
+    <div class="page-header-box mb-4">
+        <span class="light-safari-tag mb-2">
+            <span class="live-pulse-dot"></span>
+            Expedition Reservations Registry
+        </span>
+        <h1 class="display-6 fw-bold mb-1" style="font-family: 'Outfit', sans-serif;">
+            Master Reservations <span class="light-serif-italic">Registry</span>
+        </h1>
+        <p class="text-muted small mb-0">Central reservation control, status tracking, and DWC permit clearing across Sri Lankan parks</p>
     </div>
 
     <div class="safari-card p-4">
@@ -58,14 +62,20 @@
                     </td>
                     <td>
                         <span class="badge"
-                              th:classappend="${b.paymentStatus == 'PAID'} ? 'badge-safari-olive' : 'badge-safari-rose'"
+                              th:classappend="${b.paymentStatus == 'PAID'} ? 'badge-safari-olive' : (${b.paymentStatus == 'PENDING'} ? 'badge-safari-cream text-warning-emphasis fw-bold' : 'badge-safari-rose')"
                               th:text="${b.paymentStatus}">UNPAID</span>
                     </td>
                     <td>
-                        <div class="d-flex gap-1">
+                        <div class="d-flex gap-1 align-items-center">
                             <a th:href="@{'/bookings/confirmation/' + ${b.bookingReference}}" class="btn btn-sm btn-outline-secondary" title="View Details">View</a>
-                            <button th:if="${b.bookingStatus != 'CANCELLED'}" type="button" class="btn btn-sm btn-outline-primary"
+                            <button th:if="${b.bookingStatus != 'CANCELLED' and b.paymentStatus == 'UNPAID'}" type="button" class="btn btn-sm btn-outline-primary"
                                     data-bs-toggle="modal" th:data-bs-target="'#manageEditBookingModal' + ${b.id}" title="Edit Booking">Edit</button>
+                            <span th:if="${b.paymentStatus == 'PAID' and b.bookingStatus != 'CANCELLED'}" class="badge bg-light text-secondary border px-2 py-1" title="Paid reservations are locked from modifications">
+                                <i class="bi bi-lock-fill text-muted me-1"></i>Paid (Locked)
+                            </span>
+                            <span th:if="${b.paymentStatus == 'PENDING' and b.bookingStatus != 'CANCELLED'}" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1" title="Bank slip submitted. Awaiting finance verification.">
+                                <i class="bi bi-hourglass-split me-1"></i>Verification Pending
+                            </span>
                             <form th:if="${b.bookingStatus != 'CANCELLED'}" th:action="@{'/bookings/cancel/' + ${b.id}}" method="post" style="display:inline;">
                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel Booking" onclick="return confirm('Cancel this reservation?')">Cancel</button>
                             </form>
@@ -80,14 +90,16 @@
 
 <!-- Edit Booking Modals for Staff Management -->
 <th:block th:each="b : ${bookings}">
-    <div th:if="${b.bookingStatus != 'CANCELLED'}" class="modal fade" th:id="'manageEditBookingModal' + ${b.id}" tabindex="-1" aria-hidden="true">
+    <div th:if="${b.bookingStatus != 'CANCELLED' and b.paymentStatus != 'PAID'}" class="modal fade" th:id="'manageEditBookingModal' + ${b.id}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 rounded-4 shadow">
                 <div class="modal-header border-bottom px-4 py-3">
                     <h5 class="modal-title fw-bold">Edit Reservation: <span class="text-primary" th:text="${b.bookingReference}">WS-1234</span></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form th:action="@{'/bookings/update/' + ${b.id}}" method="post">
+                <form th:action="@{'/bookings/update/' + ${b.id}}" method="post" class="booking-manage-edit-form"
+                      th:data-base-price="${b.safariPackage.basePrice}"
+                      th:data-multiplier="${b.safariPackage.peakSeasonMultiplier}">
                     <div class="modal-body px-4 py-3">
                         <div class="mb-3">
                             <label class="form-label small fw-bold">Guest Name</label>
@@ -99,12 +111,26 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold">Trip Date</label>
-                            <input type="date" name="tripDate" class="form-control safari-input" th:value="${b.tripDate}" required>
+                            <input type="date" name="tripDate" class="form-control safari-input manage-date-input" th:value="${b.tripDate}"
+                                   th:min="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}" required>
+                            <small class="text-muted">Select today or future date (July, August, December, January are Peak Season)</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold">Participant Count (Pax)</label>
-                            <input type="number" name="participantCount" class="form-control safari-input" th:value="${b.participantCount}" min="1" max="10" required>
+                            <input type="number" name="participantCount" class="form-control safari-input manage-pax-input" th:value="${b.participantCount}" min="1" th:max="${b.safariPackage.maxGroupSize}" th:data-max="${b.safariPackage.maxGroupSize}" required>
+                            <small class="text-muted">Min 1, Max group size: <span th:text="${b.safariPackage.maxGroupSize}"></span> guests</small>
+                            <div class="small text-danger manage-pax-error-msg mt-1"></div>
                         </div>
+
+                        <!-- Live Recalculation Preview -->
+                        <div class="p-3 mb-3 bg-light rounded-3 border">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small fw-bold text-muted"><i class="bi bi-calculator me-1 text-primary"></i>Live Recalculated Total:</span>
+                                <span class="fw-bold text-success fs-5">LKR <span class="manage-recalc-total" th:text="${#numbers.formatDecimal(b.totalPrice, 0, 'COMMA', 2, 'POINT')}">57,000.00</span></span>
+                            </div>
+                            <div class="small text-muted mt-1 manage-recalc-note">Base: LKR <span th:text="${#numbers.formatDecimal(b.safariPackage.basePrice, 0, 'COMMA', 2, 'POINT')}"></span> per guest</div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label small fw-bold">Special Requests / Notes</label>
                             <textarea name="specialRequests" class="form-control safari-input" rows="2" th:text="${b.specialRequests}"></textarea>
@@ -112,7 +138,7 @@
                     </div>
                     <div class="modal-footer border-top px-4 py-3">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-safari-primary">Update Reservation</button>
+                        <button type="submit" class="btn btn-safari-primary manage-submit-btn">Update Reservation &amp; Price</button>
                     </div>
                 </form>
             </div>
@@ -121,6 +147,73 @@
 </th:block>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+<script>
+    document.querySelectorAll('.booking-manage-edit-form').forEach(form => {
+        const basePrice = parseFloat(form.dataset.basePrice) || 0;
+        const multiplier = parseFloat(form.dataset.multiplier) || 1.0;
+        const paxInput = form.querySelector('.manage-pax-input');
+        const dateInput = form.querySelector('.manage-date-input');
+        const totalSpan = form.querySelector('.manage-recalc-total');
+        const noteSpan = form.querySelector('.manage-recalc-note');
+        const paxError = form.querySelector('.manage-pax-error-msg');
+        const submitBtn = form.querySelector('.manage-submit-btn');
+        const maxPax = parseInt(paxInput.dataset.max || paxInput.getAttribute('max') || '10', 10);
+
+        // Prevent negative keys
+        paxInput.addEventListener('keydown', (e) => {
+            if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
+                e.preventDefault();
+            }
+        });
+
+        function recalc() {
+            let pax = parseInt(paxInput.value, 10);
+            let isValid = true;
+
+            if (isNaN(pax) || pax < 1) {
+                paxError.textContent = '⚠️ Cannot enter 0 or negative passengers. Min 1 required.';
+                paxInput.classList.add('is-invalid');
+                isValid = false;
+                pax = 1;
+            } else if (pax > maxPax) {
+                paxError.textContent = `⚠️ Exceeds max limit of ${maxPax} passengers.`;
+                paxInput.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                paxError.textContent = '';
+                paxInput.classList.remove('is-invalid');
+            }
+
+            if (submitBtn) submitBtn.disabled = !isValid;
+
+            const dateVal = dateInput.value;
+            let isPeak = false;
+            if (dateVal) {
+                const parts = dateVal.split('-');
+                if (parts.length >= 2) {
+                    const month = parseInt(parts[1], 10);
+                    isPeak = (month === 7 || month === 8 || month === 12 || month === 1);
+                }
+            }
+            const effectiveMultiplier = isPeak ? multiplier : 1.0;
+            const total = (basePrice * pax) * effectiveMultiplier;
+            if (totalSpan) {
+                totalSpan.textContent = total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            if (noteSpan) {
+                noteSpan.textContent = isPeak
+                    ? `⚡ Peak Season Multiplier (${multiplier}x) Applied`
+                    : `🌿 Standard Season Rate (LKR ${basePrice.toLocaleString()} per guest)`;
+            }
+        }
+
+        if (paxInput) {
+            paxInput.addEventListener('input', recalc);
+            paxInput.addEventListener('change', recalc);
+        }
+        if (dateInput) dateInput.addEventListener('change', recalc);
+    });
+</script>
 </body>
 </html>

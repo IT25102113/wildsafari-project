@@ -91,6 +91,20 @@ public class SessionAuthInterceptor implements HandlerInterceptor {
             return false;
         }
 
+        // Guide Portal (only GUIDE role)
+        if (path.startsWith("/guide-portal/") && !hasAnyRole(role, "GUIDE", "ADMIN")) {
+            response.sendRedirect(contextPath + getAuthorizedHome(role) + "?unauthorized=true");
+            return false;
+        }
+
+        // Guide Role Restrictions: Guides cannot book packages or access client portals
+        if ("GUIDE".equalsIgnoreCase(role)) {
+            if (path.startsWith("/bookings") || path.startsWith("/packages") || path.startsWith("/finance")) {
+                response.sendRedirect(contextPath + "/guide-portal/dashboard");
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -111,6 +125,7 @@ public class SessionAuthInterceptor implements HandlerInterceptor {
             case "CONSERVATION_OFFICER": return "/conservation/dashboard";
             case "LOGISTICS_STAFF": return "/inventory/dashboard";
             case "FINANCE_OFFICER": return "/finance/dashboard";
+            case "GUIDE": return "/guide-portal/dashboard";
             case "CUSTOMER":
             default: return "/bookings/my-bookings";
         }

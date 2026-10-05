@@ -1,14 +1,19 @@
 package com.safari.module.conservation_mgmt;
 
 import com.safari.common.ActivityLogService;
+import com.safari.common.NotificationService;
+import com.safari.module.allocation_mgmt.GuideRepository;
+import com.safari.module.user_mgmt.UserRepository;
 import com.safari.patterns.factory.ReferenceFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class ConservationService {
@@ -17,15 +22,24 @@ public class ConservationService {
     private final WildlifeSightingRepository sightingRepository;
     private final IncidentReportRepository incidentRepository;
     private final ActivityLogService activityLogService;
+    private final NotificationService notificationService;
+    private final GuideRepository guideRepository;
+    private final UserRepository userRepository;
 
     public ConservationService(ParkPermitRepository permitRepository,
                                WildlifeSightingRepository sightingRepository,
                                IncidentReportRepository incidentRepository,
-                               ActivityLogService activityLogService) {
+                               ActivityLogService activityLogService,
+                               NotificationService notificationService,
+                               GuideRepository guideRepository,
+                               UserRepository userRepository) {
         this.permitRepository = permitRepository;
         this.sightingRepository = sightingRepository;
         this.incidentRepository = incidentRepository;
         this.activityLogService = activityLogService;
+        this.notificationService = notificationService;
+        this.guideRepository = guideRepository;
+        this.userRepository = userRepository;
     }
 
     // 1. Permits
@@ -105,6 +119,21 @@ public class ConservationService {
                 "REPORT_INCIDENT",
                 "Incident registered: " + saved.getIncidentNumber() + " [" + saved.getSeverity() + "] in " + saved.getParkName()
         );
+
+        // Send alert notification to admin and dispatcher
+        notificationService.sendNotification(
+                "admin@safari.lk",
+                "Wildlife Incident Alert: " + saved.getIncidentNumber(),
+                "A " + saved.getSeverity() + " severity incident was reported in " + saved.getParkName() + ": " + saved.getDescription(),
+                "INCIDENT_ALERT"
+        );
+        notificationService.sendNotification(
+                "ops@safari.lk",
+                "Wildlife Incident Alert: " + saved.getIncidentNumber(),
+                "A " + saved.getSeverity() + " severity incident was reported in " + saved.getParkName() + ": " + saved.getDescription(),
+                "INCIDENT_ALERT"
+        );
+
         return saved;
     }
 
@@ -119,6 +148,14 @@ public class ConservationService {
                     "Conservation & Compliance",
                     "UPDATE_PERMIT_STATUS",
                     "Permit " + p.getPermitNumber() + " status updated to " + newStatus
+            );
+
+            // Send notification about permit update
+            notificationService.sendNotification(
+                    "operator@safari.lk",
+                    "Park Permit Status Updated",
+                    "Permit " + p.getPermitNumber() + " for " + p.getParkName() + " has been updated to: " + newStatus,
+                    "PERMIT_UPDATE"
             );
         });
     }
@@ -193,5 +230,66 @@ public class ConservationService {
         summary.put("totalSightings", sightingRepository.count());
         summary.put("totalIncidents", incidentRepository.count());
         return summary;
+    }
+
+    /**
+     * Broadcast an official DWC Wildlife Advisory / Park Alert
+     * @param targetAudience GUIDES, ADMIN, or ALL
+     * @param parkName National Park name
+     * @param alertLevel INFO, WARNING, or CRITICAL
+     * @param title Alert headline
+     * @param message Directive details
+     * @param officerEmail Sender officer's email
+     * @return Number of recipients notified
+     */
+    @Transactional
+    public int broadcastAlert(String targetAudience, String parkName, String alertLevel, String title, String message, String officerEmail) {
+        Set<String> recipientEmails = new LinkedHashSet<>();
+
+        if ("GUIDES".equalsIgnoreCase(targetAudience) || "ALL".equalsIgnoreCase(targetAudience)) {
+            guideRepository.findByStatus("ACTIVE").forEach(g -> {
+                if (g.getEmail() != null && !g.getEmail().isBlank()) {
+                    recipientEmails.add(g.getEmail());
+                }
+            });
+        }
+
+        if ("ADMIN".equalsIgnoreCase(targetAudience) || "ALL".equalsIgnoreCase(targetAudience)) {
+            userRepository.findByRole("ADMIN").forEach(u -> {
+                if (u.getEmail() != null && !u.getEmail().isBlank()) {
+                    recipientEmails.add(u.getEmail());
+                }
+            });
+            userRepository.findByRole("OPERATIONS_MANAGER").forEach(u -> {
+                if (u.getEmail() != null && !u.getEmail().isBlank()) {
+                    recipientEmails.add(u.getEmail());
+                }
+            });
+        }
+
+        // Always notify the issuing officer so they have record in their own alerts feed
+        recipientEmails.add(officerEmail);
+
+        String advisoryTitle = "📢 DWC Advisory [" + parkName + "]: " + title;
+        String advisoryMessage = "⚠️ Alert Level: " + alertLevel + "\nNational Park: " + parkName + "\nIssued by: DWC Lead Officer (" + officerEmail + ")\n\nDirective:\n" + message;
+
+        for (String email : recipientEmails) {
+            notificationService.sendNotification(
+                    email,
+                    advisoryTitle,
+                    advisoryMessage,
+                    alertLevel
+            );
+        }
+
+        activityLogService.publishActivity(
+                officerEmail,
+                "CONSERVATION_OFFICER",
+                "Conservation & Compliance",
+                "BROADCAST_ADVISORY",
+                "Broadcasted DWC alert '" + title + "' for " + parkName + " to " + recipientEmails.size() + " recipient(s) [" + targetAudience + "]"
+        );
+
+        return recipientEmails.size();
     }
 }

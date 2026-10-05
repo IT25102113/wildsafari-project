@@ -21,6 +21,9 @@ public class HomeController {
 
     @GetMapping("/")
     public String index(Model model, HttpSession session) {
+        if ("GUIDE".equalsIgnoreCase(UserSession.getCurrentRole(session))) {
+            return "redirect:/guide-portal/dashboard";
+        }
         List<SafariPackage> activePackages = packageService.getActivePackages();
         model.addAttribute("packages", activePackages);
         model.addAttribute("currentUser", UserSession.getLoggedInUser(session));
@@ -30,6 +33,9 @@ public class HomeController {
 
     @GetMapping("/about")
     public String about(Model model, HttpSession session) {
+        if ("GUIDE".equalsIgnoreCase(UserSession.getCurrentRole(session))) {
+            return "redirect:/guide-portal/dashboard";
+        }
         model.addAttribute("currentUser", UserSession.getLoggedInUser(session));
         model.addAttribute("currentRole", UserSession.getCurrentRole(session));
         return "about";

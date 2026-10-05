@@ -1,6 +1,7 @@
 package com.safari.module.inventory_mgmt;
 
 import com.safari.common.ActivityLogService;
+import com.safari.common.NotificationService;
 import com.safari.module.booking_mgmt.Booking;
 import com.safari.module.booking_mgmt.BookingRepository;
 import org.springframework.stereotype.Service;
@@ -17,15 +18,18 @@ public class InventoryService {
     private final EquipmentAllocationRepository allocationRepository;
     private final BookingRepository bookingRepository;
     private final ActivityLogService activityLogService;
+    private final NotificationService notificationService;
 
     public InventoryService(EquipmentRepository equipmentRepository,
                             EquipmentAllocationRepository allocationRepository,
                             BookingRepository bookingRepository,
-                            ActivityLogService activityLogService) {
+                            ActivityLogService activityLogService,
+                            NotificationService notificationService) {
         this.equipmentRepository = equipmentRepository;
         this.allocationRepository = allocationRepository;
         this.bookingRepository = bookingRepository;
         this.activityLogService = activityLogService;
+        this.notificationService = notificationService;
     }
 
     public List<Equipment> getAllEquipment() {
@@ -86,7 +90,14 @@ public class InventoryService {
         eq.setAvailableQuantity(eq.getAvailableQuantity() - quantity);
         equipmentRepository.save(eq);
 
-        EquipmentAllocation allocation = new EquipmentAllocation(eq, booking, quantity, LocalDate.now(), remarks);
+        EquipmentAllocation allocation = allocationRepository.findByEquipmentIdAndBookingId(equipmentId, bookingId)
+                .orElse(new EquipmentAllocation(eq, booking, 0, LocalDate.now(), remarks));
+        allocation.setAllocatedQuantity(allocation.getAllocatedQuantity() + quantity);
+        allocation.setStatus("ISSUED");
+        allocation.setIssuedDate(LocalDate.now());
+        if (remarks != null && !remarks.isBlank()) {
+            allocation.setRemarks(remarks);
+        }
         EquipmentAllocation saved = allocationRepository.save(allocation);
 
         activityLogService.publishActivity(
@@ -96,6 +107,16 @@ public class InventoryService {
                 "ISSUE_EQUIPMENT",
                 "Issued " + quantity + "x " + eq.getItemName() + " to booking " + booking.getBookingReference()
         );
+
+        // Notify tourist that equipment has been issued
+        if (booking.getCustomerEmail() != null) {
+            notificationService.send(
+                    booking.getCustomerEmail(),
+                    "Equipment Issued: " + eq.getItemName() + " 🎒",
+                    quantity + "x " + eq.getItemName() + " has been issued and assigned to your expedition " + booking.getBookingReference() + ".",
+                    "EQUIPMENT_ISSUED"
+            );
+        }
 
         return saved;
     }
@@ -108,8 +129,14 @@ public class InventoryService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
 
-        EquipmentAllocation allocation = new EquipmentAllocation(eq, booking, quantity, LocalDate.now(), remarks);
+        EquipmentAllocation allocation = allocationRepository.findByEquipmentIdAndBookingId(equipmentId, bookingId)
+                .orElse(new EquipmentAllocation(eq, booking, 0, LocalDate.now(), remarks));
+        allocation.setAllocatedQuantity(allocation.getAllocatedQuantity() + quantity);
         allocation.setStatus("REQUESTED");
+        allocation.setIssuedDate(LocalDate.now());
+        if (remarks != null && !remarks.isBlank()) {
+            allocation.setRemarks(remarks);
+        }
         EquipmentAllocation saved = allocationRepository.save(allocation);
 
         activityLogService.publishActivity(
@@ -118,6 +145,15 @@ public class InventoryService {
                 "Inventory & Equipment",
                 "REQUEST_EQUIPMENT",
                 "Requested " + quantity + "x " + eq.getItemName() + " for booking " + booking.getBookingReference()
+        );
+
+        // Notify logistics officer in charge of depot inventory
+        notificationService.send(
+                "logistics@safari.lk",
+                "New Equipment Request: " + eq.getItemName() + " 📦",
+                quantity + "x " + eq.getItemName() + " requested for Booking " + booking.getBookingReference() +
+                        " by " + booking.getCustomerName() + " (" + booking.getCustomerEmail() + "). Please inspect depot and approve.",
+                "EQUIPMENT_REQUEST"
         );
 
         return saved;
@@ -153,6 +189,17 @@ public class InventoryService {
                 "Approved " + allocation.getAllocatedQuantity() + "x " + eq.getItemName() + " to booking " + allocation.getBooking().getBookingReference()
         );
 
+        // Notify tourist that requested gear is approved
+        if (saved.getBooking() != null && saved.getBooking().getCustomerEmail() != null) {
+            notificationService.send(
+                    saved.getBooking().getCustomerEmail(),
+                    "Equipment Request Approved: " + eq.getItemName() + " ✅",
+                    "Your request for " + saved.getAllocatedQuantity() + "x " + eq.getItemName() +
+                            " for Booking " + saved.getBooking().getBookingReference() + " has been approved by the depot.",
+                    "EQUIPMENT_APPROVED"
+            );
+        }
+
         return saved;
     }
 
@@ -182,15 +229,23 @@ public class InventoryService {
 
     @Transactional
     public void deleteEquipment(Long id, String actorEmail) {
-        equipmentRepository.findById(id).ifPresent(eq -> {
-            activityLogService.publishActivity(
-                    actorEmail,
-                    "LOGISTICS_STAFF",
-                    "Inventory & Equipment",
-                    "DECOMMISSION_EQUIPMENT",
-                    "Decommissioned equipment: " + eq.getItemName() + " (" + eq.getItemCode() + ")"
-            );
-            equipmentRepository.delete(eq);
-        });
+        Equipment eq = equipmentRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Equipment item not found"));
+
+        // Block delete if equipment is currently issued or requested
+        if (allocationRepository.hasActiveAllocations(id)) {
+            throw new IllegalStateException(
+                "Cannot delete '" + eq.getItemName() + "' — it has active ISSUED or REQUESTED allocations. " +
+                "Please mark all allocations as RETURNED before decommissioning this item.");
+        }
+
+        activityLogService.publishActivity(
+                actorEmail,
+                "LOGISTICS_STAFF",
+                "Inventory & Equipment",
+                "DECOMMISSION_EQUIPMENT",
+                "Decommissioned equipment: " + eq.getItemName() + " (" + eq.getItemCode() + ")"
+        );
+        equipmentRepository.delete(eq);
     }
 }

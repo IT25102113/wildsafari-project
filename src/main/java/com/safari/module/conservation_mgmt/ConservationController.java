@@ -1,5 +1,6 @@
 package com.safari.module.conservation_mgmt;
 
+import com.safari.common.NotificationService;
 import com.safari.common.UserSession;
 import com.safari.module.booking_mgmt.BookingService;
 import com.safari.module.user_mgmt.User;
@@ -17,10 +18,14 @@ public class ConservationController {
 
     private final ConservationService conservationService;
     private final BookingService bookingService;
+    private final NotificationService notificationService;
 
-    public ConservationController(ConservationService conservationService, BookingService bookingService) {
+    public ConservationController(ConservationService conservationService,
+                                  BookingService bookingService,
+                                  NotificationService notificationService) {
         this.conservationService = conservationService;
         this.bookingService = bookingService;
+        this.notificationService = notificationService;
     }
 
     @GetMapping("/dashboard")
@@ -40,6 +45,10 @@ public class ConservationController {
         model.addAttribute("incidents", conservationService.getAllIncidents());
         model.addAttribute("summary", conservationService.getComplianceSummary());
         model.addAttribute("bookings", bookingService.getAllBookings());
+
+        // Notifications & Advisories
+        model.addAttribute("notifications", notificationService.getAll(user.getEmail()));
+        model.addAttribute("unreadCount", notificationService.countUnread(user.getEmail()));
 
         model.addAttribute("newPermit", new ParkPermit());
         model.addAttribute("newSighting", new WildlifeSighting());
@@ -201,5 +210,59 @@ public class ConservationController {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/conservation/dashboard";
+    }
+
+    // ─── Broadcast DWC Park Alert ──────────────────────────────────────────
+    @GetMapping("/broadcast")
+    public String broadcastGet() {
+        return "redirect:/conservation/dashboard";
+    }
+
+    @PostMapping("/broadcast")
+    public String broadcastAlert(@RequestParam("targetAudience") String targetAudience,
+                                 @RequestParam("parkName") String parkName,
+                                 @RequestParam("alertLevel") String alertLevel,
+                                 @RequestParam("title") String title,
+                                 @RequestParam("message") String message,
+                                 HttpSession session,
+                                 RedirectAttributes redirectAttributes) {
+        User user = UserSession.getLoggedInUser(session);
+        if (user == null) return "redirect:/login";
+        if (!"CONSERVATION_OFFICER".equalsIgnoreCase(user.getRole()) && !"ADMIN".equalsIgnoreCase(user.getRole())) {
+            return "redirect:/";
+        }
+
+        if (title == null || title.isBlank() || message == null || message.isBlank()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Advisory headline and directive details cannot be empty.");
+            return "redirect:/conservation/dashboard";
+        }
+
+        try {
+            int count = conservationService.broadcastAlert(targetAudience, parkName, alertLevel, title.trim(), message.trim(), user.getEmail());
+            redirectAttributes.addFlashAttribute("successMessage", "📢 Official DWC Wildlife Advisory successfully broadcasted to " + count + " field & operations personnel!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Failed to broadcast advisory: " + e.getMessage());
+        }
+
+        return "redirect:/conservation/dashboard";
+    }
+
+    // ─── Notification Status Actions ───────────────────────────────────────
+    @PostMapping("/notifications/read/{id}")
+    public String markRead(@PathVariable Long id, HttpSession session) {
+        User user = UserSession.getLoggedInUser(session);
+        if (user != null) {
+            notificationService.markRead(id);
+        }
+        return "redirect:/conservation/dashboard#notificationsSection";
+    }
+
+    @PostMapping("/notifications/read-all")
+    public String markAllRead(HttpSession session) {
+        User user = UserSession.getLoggedInUser(session);
+        if (user != null) {
+            notificationService.markAllRead(user.getEmail());
+        }
+        return "redirect:/conservation/dashboard#notificationsSection";
     }
 }

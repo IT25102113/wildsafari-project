@@ -7,7 +7,12 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "equipment_allocations")
+@Table(
+    name = "equipment_allocations",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_equipment_booking_composite", columnNames = {"equipment_id", "booking_id"})
+    }
+)
 public class EquipmentAllocation {
 
     @Id

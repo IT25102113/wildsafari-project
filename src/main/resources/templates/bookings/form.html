@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book Safari Expedition — WildSafari Sri Lanka</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/custom-safari.css}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" th:href="@{/css/bootstrap-icons.min.css}">
 </head>
 <body>
 
@@ -57,18 +57,110 @@
                         </div>
                     </div>
 
-                    <h5 class="fw-bold mt-4 mb-3" style="color: var(--safari-dark);">2. Expedition Schedule & Group</h5>
+                    <h5 class="fw-bold mt-4 mb-3" style="color: var(--safari-dark);">2. Expedition Schedule &amp; Group</h5>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Trip Date</label>
-                            <input type="date" th:field="*{tripDate}" class="form-control safari-input" id="bookingTripDate" required>
+                    <div class="row g-3 mb-4">
+                        <!-- Trip Date Input with Dropdown Calendar Popup -->
+                        <div class="col-md-6 position-relative" id="safariCalendarDropdownWrapper">
+                            <label class="form-label small fw-bold" for="bookingTripDate">
+                                Trip Date <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" title="Click to open calendar and view Peak/Off-Peak months"></i>
+                            </label>
+                            
+                            <div class="input-group">
+                                <input type="text" name="tripDate" 
+                                       th:value="${booking.tripDate != null ? #temporals.format(booking.tripDate, 'yyyy-MM-dd') : ''}" 
+                                       class="form-control safari-input bg-white" id="bookingTripDate" 
+                                       placeholder="yyyy-mm-dd" autocomplete="off" readonly style="cursor: pointer;" required>
+                                <button type="button" class="btn btn-outline-secondary border-start-0 bg-white" id="calendarToggleBtn" style="border-color: rgba(28, 38, 25, 0.15);" title="Open Calendar">
+                                    <i class="bi bi-calendar3 text-success"></i>
+                                </button>
+                            </div>
+                            <div id="bookingTripDate-error" class="small text-danger validation-msg mt-1"></div>
                             <div th:if="${#fields.hasErrors('tripDate')}" th:errors="*{tripDate}" class="small text-danger mt-1"></div>
+
+                            <!-- Under-Input Season Status Badge -->
+                            <div id="selectedDateSeasonPill" class="mt-1" style="display: none;"></div>
+
+                            <!-- Small Seasonal Calendar Dropdown Popup (310px width) -->
+                            <div class="safari-mini-calendar-popup shadow" id="safariMiniCalendar" style="display: none;">
+                                <!-- Season Filter Tabs -->
+                                <div class="mini-cal-filter-bar">
+                                    <button type="button" class="mini-cal-filter-btn active" data-season="all" onclick="filterMiniSeason('all')">All</button>
+                                    <button type="button" class="mini-cal-filter-btn filter-peak" data-season="peak" onclick="filterMiniSeason('peak')">⚡ Peak</button>
+                                    <button type="button" class="mini-cal-filter-btn filter-offpeak" data-season="offpeak" onclick="filterMiniSeason('offpeak')">🌿 Off-Peak</button>
+                                </div>
+
+                                <!-- Month Navigation Header with Dropdown -->
+                                <div class="mini-cal-nav">
+                                    <button type="button" class="mini-cal-nav-btn" onclick="navMonth(-1)" title="Previous Month">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </button>
+                                    
+                                    <div class="d-flex align-items-center justify-content-center gap-1 flex-grow-1">
+                                        <select id="miniMonthSelect" class="form-select form-select-sm fw-bold border-0 bg-transparent py-0 ps-1 pe-3" onchange="onMiniMonthChange(this.value)" style="font-size: 0.84rem; font-family: 'Outfit', sans-serif; cursor: pointer; width: auto; background-size: 8px 8px; background-position: right 3px center;">
+                                            <option value="0">Jan ⚡ (Peak)</option>
+                                            <option value="1">Feb 🌿 (Off)</option>
+                                            <option value="2">Mar 🌿 (Off)</option>
+                                            <option value="3">Apr 🌿 (Off)</option>
+                                            <option value="4">May 🌿 (Off)</option>
+                                            <option value="5">Jun 🌿 (Off)</option>
+                                            <option value="6">Jul ⚡ (Peak)</option>
+                                            <option value="7">Aug ⚡ (Peak)</option>
+                                            <option value="8">Sep 🌿 (Off)</option>
+                                            <option value="9">Oct 🌿 (Off)</option>
+                                            <option value="10">Nov 🌿 (Off)</option>
+                                            <option value="11">Dec ⚡ (Peak)</option>
+                                        </select>
+                                        <select id="miniYearSelect" class="form-select form-select-sm fw-bold border-0 bg-transparent py-0 ps-1 pe-3" onchange="onMiniYearChange(this.value)" style="font-size: 0.84rem; font-family: 'Outfit', sans-serif; cursor: pointer; width: auto; background-size: 8px 8px; background-position: right 3px center;">
+                                            <option value="2026">2026</option>
+                                            <option value="2027">2027</option>
+                                        </select>
+                                    </div>
+
+                                    <button type="button" class="mini-cal-nav-btn" onclick="navMonth(1)" title="Next Month">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Dynamic Season Status Notice inside the Popup -->
+                                <div id="miniCalSeasonBanner" class="mini-cal-season-status is-offpeak">
+                                    🌿 Off-Peak / Standard Season (Best Value)
+                                </div>
+
+                                <!-- Weekdays Header -->
+                                <div class="mini-cal-weekdays">
+                                    <div class="mini-cal-weekday">M</div>
+                                    <div class="mini-cal-weekday">T</div>
+                                    <div class="mini-cal-weekday">W</div>
+                                    <div class="mini-cal-weekday">T</div>
+                                    <div class="mini-cal-weekday">F</div>
+                                    <div class="mini-cal-weekday text-danger">S</div>
+                                    <div class="mini-cal-weekday text-danger">S</div>
+                                </div>
+
+                                <!-- 7-col Days Grid -->
+                                <div class="mini-cal-days-grid" id="miniCalDaysGrid"></div>
+
+                                <!-- Bottom Footer Actions & Legend -->
+                                <div class="mini-cal-footer">
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-muted text-decoration-none" onclick="clearMiniDate()" style="font-size: 0.72rem;">Clear</button>
+                                    <div class="d-flex align-items-center gap-2 text-muted" style="font-size: 0.68rem;">
+                                        <span><span style="color: #D97706;">●</span> Peak (+25%)</span>
+                                        <span><span style="color: #059669;">●</span> Standard</span>
+                                    </div>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-success text-decoration-none fw-bold" onclick="selectMiniToday()" style="font-size: 0.72rem;">Today</button>
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- Number of Participants Input -->
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold">Number of Participants (Max <span th:text="${pkg.maxGroupSize}">6</span>)</label>
+                            <label class="form-label small fw-bold" for="bookingParticipants">
+                                Number of Participants (1 – <span th:text="${pkg.maxGroupSize}">6</span> Pax) <i class="bi bi-info-circle text-muted ms-1" title="Select between 1 and maximum allowed group size"></i>
+                            </label>
                             <input type="number" th:field="*{participantCount}" class="form-control safari-input" id="bookingParticipants"
-                                   min="1" th:max="${pkg.maxGroupSize}" required>
+                                   min="1" th:max="${pkg.maxGroupSize}" th:data-max="${pkg.maxGroupSize}" required>
+                            <div id="bookingParticipants-error" class="small text-danger validation-msg mt-1"></div>
                             <div th:if="${#fields.hasErrors('participantCount')}" th:errors="*{participantCount}" class="small text-danger mt-1"></div>
                         </div>
                     </div>
@@ -80,23 +172,30 @@
                     </div>
 
                     <!-- Live Strategy Pricing Calculation Display -->
-                    <div class="p-4 rounded-3 mb-4" style="background-color: var(--safari-bg); border: 1.5px solid var(--safari-border);">
+                    <div class="p-4 rounded-4 mb-4" style="background-color: var(--safari-cream); border: 1px solid rgba(142, 166, 107, 0.35);">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <span class="text-muted small">Package Base Rate:</span>
                             <span class="fw-semibold">LKR <span th:text="${#numbers.formatDecimal(pkg.basePrice, 0, 'COMMA', 2, 'POINT')}">28,500.00</span> per pax</span>
                         </div>
                         <div id="peakSeasonNotice" class="d-none alert alert-warning py-1 px-2 small mb-2">
-                            ⚡ Peak Season Rate Applied (+<span th:text="${(pkg.peakSeasonMultiplier - 1.0) * 100}">25</span>%) via Strategy Pattern
+                            ⚡ Peak Season Rate Applied (+<span th:text="${(pkg.peakSeasonMultiplier - 1.0) * 100}">25</span>%)
                         </div>
-                        <div class="d-flex align-items-center justify-content-between pt-2 border-top">
-                            <span class="fw-bold">Estimated Total Price:</span>
+                        <div class="d-flex align-items-center justify-content-between pt-2 border-top" style="border-color: rgba(142, 166, 107, 0.25) !important;">
+                            <span class="fw-bold" style="color: var(--safari-dark);">Estimated Total Price:</span>
                             <span class="h4 fw-bold mb-0" id="calculatedTotalPrice" style="color: var(--safari-olive-dark);">
                                 LKR <span th:text="${#numbers.formatDecimal(pkg.basePrice, 0, 'COMMA', 2, 'POINT')}">28,500.00</span>
                             </span>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-safari-primary w-100 py-3 fw-bold">Confirm Reservation & Proceed &rarr;</button>
+                    <div class="d-flex flex-column flex-sm-row gap-3">
+                        <button type="submit" name="action" value="payNow" class="btn btn-safari-primary flex-grow-1 py-3 fw-bold">
+                            <i class="bi bi-credit-card me-2"></i>Confirm &amp; Proceed to Payment &rarr;
+                        </button>
+                        <button type="submit" name="action" value="payLater" class="btn btn-palette-rose py-3 fw-bold px-4" title="Save booking without immediate payment">
+                            <i class="bi bi-clock-history me-1"></i>Pay Later
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -119,7 +218,241 @@
 </div>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
 <script th:src="@{/js/validation.js}"></script>
+<script>
+    // Safari Mini Seasonal Calendar Dropdown Controller
+    (function() {
+        const tripDateInput = document.getElementById('bookingTripDate');
+        const calendarPopup = document.getElementById('safariMiniCalendar');
+        const toggleBtn = document.getElementById('calendarToggleBtn');
+        const seasonBadge = document.getElementById('selectedDateSeasonPill');
+        const monthSelect = document.getElementById('miniMonthSelect');
+        const yearSelect = document.getElementById('miniYearSelect');
+        const seasonBanner = document.getElementById('miniCalSeasonBanner');
+        const daysGrid = document.getElementById('miniCalDaysGrid');
+
+        const PEAK_MONTHS = [1, 7, 8, 12]; // Jan, Jul, Aug, Dec
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        let initialDate = new Date();
+        if (tripDateInput && tripDateInput.value) {
+            const parts = tripDateInput.value.split('-');
+            if (parts.length === 3) {
+                initialDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+            }
+        } else {
+            initialDate.setDate(today.getDate() + 2);
+        }
+
+        let calYear = initialDate.getFullYear();
+        let calMonth = initialDate.getMonth(); // 0-11
+        let selectedDateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(initialDate.getDate()).padStart(2, '0')}`;
+        let activeFilter = 'all';
+
+        function isPeak(mNum) {
+            return PEAK_MONTHS.includes(mNum);
+        }
+
+        function openPopup() {
+            if (calendarPopup) {
+                calendarPopup.style.display = 'block';
+                renderCalendar();
+            }
+        }
+
+        function closePopup() {
+            if (calendarPopup) calendarPopup.style.display = 'none';
+        }
+
+        function togglePopup() {
+            if (!calendarPopup) return;
+            if (calendarPopup.style.display === 'none' || calendarPopup.style.display === '') {
+                openPopup();
+            } else {
+                closePopup();
+            }
+        }
+
+        if (tripDateInput) {
+            tripDateInput.addEventListener('click', (e) => {
+                e.stopPropagation();
+                togglePopup();
+            });
+        }
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                togglePopup();
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!calendarPopup || calendarPopup.style.display === 'none') return;
+            const isInside = calendarPopup.contains(e.target) || 
+                             (tripDateInput && tripDateInput.contains(e.target)) ||
+                             (toggleBtn && toggleBtn.contains(e.target));
+            if (!isInside) closePopup();
+        });
+
+        window.filterMiniSeason = function(season) {
+            activeFilter = season;
+            document.querySelectorAll('.mini-cal-filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.season === season);
+            });
+
+            const currentMNum = calMonth + 1;
+            if (season === 'peak' && !isPeak(currentMNum)) {
+                const peakMonths = [0, 6, 7, 11];
+                let nextPeak = peakMonths.find(m => m >= calMonth);
+                calMonth = (nextPeak !== undefined) ? nextPeak : 0;
+                if (nextPeak === undefined) calYear++;
+            } else if (season === 'offpeak' && isPeak(currentMNum)) {
+                const offPeakMonths = [1, 2, 3, 4, 5, 8, 9, 10];
+                let nextOff = offPeakMonths.find(m => m >= calMonth);
+                calMonth = (nextOff !== undefined) ? nextOff : 1;
+                if (nextOff === undefined) calYear++;
+            }
+
+            renderCalendar();
+        };
+
+        window.onMiniMonthChange = function(val) {
+            calMonth = parseInt(val, 10);
+            renderCalendar();
+        };
+
+        window.onMiniYearChange = function(val) {
+            calYear = parseInt(val, 10);
+            renderCalendar();
+        };
+
+        window.navMonth = function(delta) {
+            if (activeFilter === 'peak') {
+                const peakMonths = [0, 6, 7, 11];
+                let idx = peakMonths.indexOf(calMonth);
+                idx = (idx === -1) ? (delta > 0 ? 0 : peakMonths.length - 1) : idx + delta;
+                if (idx < 0) { idx = peakMonths.length - 1; calYear--; }
+                else if (idx >= peakMonths.length) { idx = 0; calYear++; }
+                calMonth = peakMonths[idx];
+            } else if (activeFilter === 'offpeak') {
+                const offPeakMonths = [1, 2, 3, 4, 5, 8, 9, 10];
+                let idx = offPeakMonths.indexOf(calMonth);
+                idx = (idx === -1) ? (delta > 0 ? 0 : offPeakMonths.length - 1) : idx + delta;
+                if (idx < 0) { idx = offPeakMonths.length - 1; calYear--; }
+                else if (idx >= offPeakMonths.length) { idx = 0; calYear++; }
+                calMonth = offPeakMonths[idx];
+            } else {
+                calMonth += delta;
+                if (calMonth < 0) { calMonth = 11; calYear--; }
+                else if (calMonth > 11) { calMonth = 0; calYear++; }
+            }
+            renderCalendar();
+        };
+
+        function renderCalendar() {
+            if (monthSelect) monthSelect.value = calMonth;
+            if (yearSelect) yearSelect.value = calYear;
+
+            const currentMNum = calMonth + 1;
+            const currentIsPeak = isPeak(currentMNum);
+
+            if (seasonBanner) {
+                if (currentIsPeak) {
+                    seasonBanner.className = 'mini-cal-season-status is-peak';
+                    seasonBanner.innerHTML = '⚡ Peak Season Month (+25% Surge Rate)';
+                } else {
+                    seasonBanner.className = 'mini-cal-season-status is-offpeak';
+                    seasonBanner.innerHTML = '🌿 Off-Peak / Standard (Best Value)';
+                }
+            }
+
+            if (!daysGrid) return;
+            daysGrid.innerHTML = '';
+
+            const firstDayIndex = (new Date(calYear, calMonth, 1).getDay() === 0) ? 6 : new Date(calYear, calMonth, 1).getDay() - 1;
+            for (let i = 0; i < firstDayIndex; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'mini-cal-day disabled';
+                daysGrid.appendChild(empty);
+            }
+
+            const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `mini-cal-day ${currentIsPeak ? 'day-peak' : 'day-offpeak'}`;
+
+                if (dateStr === todayStr) btn.classList.add('day-today');
+                if (dateStr === selectedDateStr) btn.classList.add('day-selected');
+
+                if (dateStr < todayStr) {
+                    btn.classList.add('disabled');
+                    btn.disabled = true;
+                    btn.title = 'Past dates cannot be selected';
+                } else {
+                    btn.title = `${currentIsPeak ? '⚡ Peak Season (+25%)' : '🌿 Standard Rate'}`;
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        selectDate(dateStr);
+                    };
+                }
+
+                btn.innerHTML = `<span>${d}</span><span class="mini-cal-dot"></span>`;
+                daysGrid.appendChild(btn);
+            }
+        }
+
+        function selectDate(dateStr) {
+            selectedDateStr = dateStr;
+            if (tripDateInput) {
+                tripDateInput.value = dateStr;
+                tripDateInput.dispatchEvent(new Event('input', { bubbles: true }));
+                tripDateInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            if (seasonBadge && dateStr) {
+                const mNum = parseInt(dateStr.split('-')[1], 10);
+                seasonBadge.style.display = 'block';
+                if (isPeak(mNum)) {
+                    seasonBadge.innerHTML = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Peak Season Month (+25% Surge Rate)</span>`;
+                } else {
+                    seasonBadge.innerHTML = `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-tree-fill text-success me-1"></i>Off-Peak / Standard Season Rate</span>`;
+                }
+            }
+
+            renderCalendar();
+            closePopup();
+        }
+
+        window.clearMiniDate = function() {
+            selectedDateStr = '';
+            if (tripDateInput) {
+                tripDateInput.value = '';
+                tripDateInput.dispatchEvent(new Event('input', { bubbles: true }));
+                tripDateInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (seasonBadge) seasonBadge.style.display = 'none';
+            renderCalendar();
+            closePopup();
+        };
+
+        window.selectMiniToday = function() {
+            selectDate(todayStr);
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (tripDateInput && tripDateInput.value) {
+                selectDate(tripDateInput.value);
+            } else {
+                selectDate(selectedDateStr);
+            }
+        });
+    })();
+</script>
 </body>
 </html>
