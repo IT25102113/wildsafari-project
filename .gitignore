@@ -40,3 +40,5 @@ Thumbs.db
 generate_report_docx.py
 screenshots/
 src/main/resources/static/report-section-5.html
+*.pdf
+setup_guide.html
